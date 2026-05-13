@@ -24,6 +24,44 @@ body {
   margin-bottom: 24px;
 }
 
+.auth-panel {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dbe5df;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.auth-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.auth-panel p {
+  color: #5d6d74;
+  margin: 0;
+}
+
+button {
+  background: #146c63;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+button:hover {
+  background: #0f554e;
+}
+
 .mode {
   color: #146c63;
   font-size: 0.85rem;
@@ -63,4 +101,11 @@ h1 {
   color: #65737d;
   line-height: 1.45;
   margin: 0;
+}
+
+@media (max-width: 560px) {
+  .auth-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

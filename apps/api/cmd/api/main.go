@@ -27,7 +27,10 @@ func run() error {
 	cfg := config.Load()
 	log := logger.New(cfg.AppEnv)
 
-	application := app.New(cfg, log)
+	application, err := app.New(context.Background(), cfg, log)
+	if err != nil {
+		return fmt.Errorf("create application: %w", err)
+	}
 	server := &http.Server{
 		Addr:              cfg.Address(),
 		Handler:           application.Handler(),

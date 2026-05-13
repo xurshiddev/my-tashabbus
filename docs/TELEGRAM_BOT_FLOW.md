@@ -14,3 +14,7 @@
 - Send notifications and reminders for follow-up tasks.
 
 The bot must not bypass API permissions or write directly to the database.
+
+## Stage 1 Auth Boundary
+
+The bot can present the Mini App button, but Telegram identity binding and access checks are owned by the API. A user must be registered and bound to a Telegram ID before Mini App authentication can return an access token.

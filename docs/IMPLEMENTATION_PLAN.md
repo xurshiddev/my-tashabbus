@@ -37,6 +37,13 @@ Stage 1 can start only after:
 ## Stage 1
 
 - Auth, users, roles, and Telegram identity binding foundation.
+- PostgreSQL users table.
+- JWT access token foundation.
+- Admin development login.
+- Telegram Mini App initData authentication endpoint.
+- Current-user and role guard middleware.
+
+Stage 1 intentionally does not include MFY, street, household, assignment, dashboard statistic, report, or voting workflow logic.
 
 ## Stage 2
 

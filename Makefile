@@ -6,7 +6,7 @@ ADMIN_DIR := apps/admin
 MINIAPP_DIR := apps/miniapp
 COMPOSE := docker compose -f docker-compose.dev.yml
 
-.PHONY: help check-tools dev down logs dev-api test-api build-api lint-api dev-bot test-bot build-bot lint-bot dev-admin build-admin lint-admin dev-miniapp build-miniapp lint-miniapp test build lint validate-local validate-code validate-docker migrate-up migrate-down migrate-create docker-config docker-up docker-down docker-logs
+.PHONY: help check-tools dev down logs dev-api test-api build-api lint-api dev-bot test-bot build-bot lint-bot dev-admin build-admin lint-admin dev-miniapp build-miniapp lint-miniapp test build lint validate-local validate-code validate-docker sqlc-generate migrate-up migrate-down migrate-create docker-config docker-up docker-down docker-logs
 
 define require_tool
 	@command -v $(1) >/dev/null 2>&1 || (echo "Required command '$(1)' was not found. Install it and retry this target." && exit 127)
@@ -91,10 +91,15 @@ validate-local: check-tools validate-code validate-docker ## Run all local valid
 validate-code: ## Run code validation for Go and frontend apps.
 	$(call require_tool,go)
 	$(call require_tool,npm)
+	@if command -v sqlc >/dev/null 2>&1; then cd $(API_DIR) && sqlc generate; else echo "sqlc not found; skipping sqlc generate check"; fi
 	cd $(API_DIR) && go mod tidy && go test ./... && go build ./...
 	cd $(BOT_DIR) && go mod tidy && go test ./... && go build ./...
 	cd $(ADMIN_DIR) && npm install && npm run build && npm run lint
 	cd $(MINIAPP_DIR) && npm install && npm run build && npm run lint
+
+sqlc-generate: ## Generate sqlc code for API queries.
+	$(call require_tool,sqlc)
+	cd $(API_DIR) && sqlc generate
 
 validate-docker: ## Validate Docker Compose and API health.
 	$(call require_tool,docker)

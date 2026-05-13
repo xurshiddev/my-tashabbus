@@ -15,3 +15,15 @@ The Telegram Mini App will be used by street leaders and responsible persons.
 - Let street leaders review streets and assignments.
 - Let responsible persons update assigned household progress.
 - Send all writes through the API so validation and permission checks remain centralized.
+
+## Stage 1 Auth Flow
+
+1. Mini App detects `window.Telegram.WebApp`.
+2. If opened inside Telegram, it reads `WebApp.initData`.
+3. User taps `Authenticate with Telegram`.
+4. Mini App sends `init_data` to `POST /auth/telegram`.
+5. API validates the Telegram signature and looks up a registered active user by `telegram_id`.
+6. If found, API returns a JWT and current user.
+7. If not found, API returns `USER_NOT_REGISTERED`.
+
+Browser development mode may use a dev Telegram payload only when `VITE_DEV_TELEGRAM_AUTH=true` and the API allows Telegram auth dev mode.

@@ -10,12 +10,16 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/my-tashabbus/api/internal/http/handlers"
 	localmiddleware "github.com/my-tashabbus/api/internal/http/middleware"
+	"github.com/my-tashabbus/api/internal/modules/auth"
+	"github.com/my-tashabbus/api/internal/modules/users"
 )
 
 type Config struct {
 	ServiceName        string
 	CORSAllowedOrigins []string
 	Logger             *slog.Logger
+	AuthService        *auth.Service
+	UserService        *users.Service
 }
 
 func New(cfg Config) http.Handler {
@@ -38,5 +42,32 @@ func New(cfg Config) http.Handler {
 	}))
 
 	r.Get("/health", handlers.HealthHandler{ServiceName: cfg.ServiceName}.ServeHTTP)
+	if cfg.AuthService != nil && cfg.UserService != nil {
+		authHandler := auth.NewHandler(cfg.AuthService)
+		userHandler := users.NewHandler(cfg.UserService)
+		requireAuth := localmiddleware.RequireAuth(cfg.AuthService.TokenManager(), cfg.UserService)
+		requireSuperAdmin := localmiddleware.RequireRole(users.RoleSuperAdmin)
+
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/dev-login", authHandler.DevLogin)
+			r.Post("/telegram", authHandler.TelegramLogin)
+			r.With(requireAuth).Get("/me", authHandler.Me)
+		})
+
+		r.Route("/users", func(r chi.Router) {
+			r.With(requireAuth).Get("/me", authHandler.Me)
+			r.Group(func(r chi.Router) {
+				r.Use(requireAuth)
+				r.Use(requireSuperAdmin)
+				r.Get("/", userHandler.List)
+				r.Post("/", userHandler.Create)
+				r.Get("/{id}", userHandler.Get)
+				r.Patch("/{id}", userHandler.Update)
+				r.Patch("/{id}/telegram", userHandler.SetTelegramIdentity)
+				r.Post("/{id}/deactivate", userHandler.Deactivate)
+				r.Post("/{id}/activate", userHandler.Activate)
+			})
+		})
+	}
 	return r
 }

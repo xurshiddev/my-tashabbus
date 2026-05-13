@@ -24,6 +24,15 @@ The repository contains separate applications for the API, Telegram Bot, Admin D
 
 PostgreSQL stores application data. The API owns database access. Bot and Mini App flows should call the API instead of directly writing to the database.
 
+## Stage 1 Auth Flow
+
+- Admin development login calls `POST /auth/dev-login` in non-production environments and receives a JWT.
+- Telegram Mini App authentication calls `POST /auth/telegram` with Telegram WebApp `initData`.
+- The API validates Telegram initData with HMAC-SHA256 and the bot token. It does not call Telegram network APIs for this check.
+- Authenticated requests use `Authorization: Bearer <token>`.
+- API middleware loads the current user, rejects inactive users, and applies role guards.
+- The Bot opens the Mini App but does not own authentication, permissions, or database writes.
+
 ## Future Modules
 
 - Auth

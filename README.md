@@ -119,6 +119,25 @@ Stage 1 must not start until either `make validate-local` passes locally or GitH
 
 To review CI, open the GitHub repository, go to the Actions tab, and inspect the latest workflow run. If CI fails, fix those errors before starting Stage 1.
 
+## Stage 1 Auth Examples
+
+Development login:
+
+```sh
+curl -X POST http://localhost:8080/auth/dev-login \
+  -H "Content-Type: application/json" \
+  -d '{"full_name":"Dev Super Admin","role":"SUPER_ADMIN"}'
+```
+
+Current user:
+
+```sh
+curl http://localhost:8080/auth/me \
+  -H "Authorization: Bearer <token>"
+```
+
+Telegram Mini App auth uses `POST /auth/telegram` with Telegram WebApp `initData`. In production, the API requires a real `BOT_TOKEN` and validates the Telegram signature. Unregistered Telegram users receive `USER_NOT_REGISTERED`.
+
 ## Project Stages
 
 - Stage 0: project foundation.

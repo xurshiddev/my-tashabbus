@@ -24,6 +24,44 @@ body {
   margin-bottom: 32px;
 }
 
+.auth-panel {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dce4e8;
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+}
+
+.auth-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.auth-panel p {
+  color: #52616b;
+  margin: 0;
+}
+
+button {
+  background: #216b5b;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+button:hover {
+  background: #185345;
+}
+
 .eyebrow {
   color: #2f6f5e;
   font-size: 0.78rem;
@@ -67,4 +105,11 @@ h1 {
   color: #65737d;
   line-height: 1.5;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .auth-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

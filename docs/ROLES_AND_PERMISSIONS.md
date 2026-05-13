@@ -7,6 +7,12 @@
 - `STREET_LEADER`
 - `RESPONSIBLE_PERSON`
 
+These roles are implemented as API constants in Stage 1. Full MFY, street, household, and assignment permission scoping is deferred to later stages.
+
+## Super Admin
+
+Platform-level administrator. In Stage 1, this role can use the minimal user management endpoints. Future stages will allow platform-wide MFY administration.
+
 ## MFY Chairman
 
 - Create and edit MFY data.

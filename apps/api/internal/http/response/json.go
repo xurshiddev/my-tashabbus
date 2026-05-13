@@ -6,7 +6,16 @@ import (
 )
 
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error ErrorBody `json:"error"`
+}
+
+type ErrorBody struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+type DataResponse struct {
+	Data any `json:"data"`
 }
 
 func JSON(w http.ResponseWriter, status int, payload any) {
@@ -18,5 +27,13 @@ func JSON(w http.ResponseWriter, status int, payload any) {
 }
 
 func Error(w http.ResponseWriter, status int, message string) {
-	JSON(w, status, ErrorResponse{Error: message})
+	ErrorCode(w, status, "INTERNAL_ERROR", message)
+}
+
+func ErrorCode(w http.ResponseWriter, status int, code, message string) {
+	JSON(w, status, ErrorResponse{Error: ErrorBody{Code: code, Message: message}})
+}
+
+func Data(w http.ResponseWriter, status int, payload any) {
+	JSON(w, status, DataResponse{Data: payload})
 }
