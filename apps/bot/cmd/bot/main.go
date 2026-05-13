@@ -26,6 +26,9 @@ func run() error {
 	log := logger.New(cfg.BotEnv)
 
 	if cfg.BotToken == "" {
+		if cfg.BotEnv == "production" {
+			return config.ErrMissingBotToken
+		}
 		log.Warn("BOT_TOKEN is empty; bot service will idle until stopped")
 		waitForShutdown(context.Background(), log)
 		return nil

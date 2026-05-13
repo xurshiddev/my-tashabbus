@@ -35,6 +35,17 @@ Check that required tools are installed:
 make check-tools
 ```
 
+If this folder is not already a Git repository, initialize and push it before relying on GitHub Actions:
+
+```sh
+git init
+git add .
+git commit -m "chore: add stage 0 project foundation and validation infrastructure"
+git branch -M main
+git remote add origin <repo-url>
+git push -u origin main
+```
+
 ## Run With Docker
 
 ```sh
@@ -105,6 +116,8 @@ GitHub Actions CI validates:
 - Docker Compose configuration and API/Bot image builds.
 
 Stage 1 must not start until either `make validate-local` passes locally or GitHub Actions CI passes successfully.
+
+To review CI, open the GitHub repository, go to the Actions tab, and inspect the latest workflow run. If CI fails, fix those errors before starting Stage 1.
 
 ## Project Stages
 

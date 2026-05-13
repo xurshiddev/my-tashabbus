@@ -18,6 +18,13 @@
 - Toolchain check script.
 - `validate-local` command.
 
+## Stage 0.3
+
+- Git repository readiness review.
+- CI workflow review.
+- GitHub push and Actions documentation.
+- CI fix preparation before Stage 1.
+
 Stage 1 can start only after:
 
 - API tests pass.

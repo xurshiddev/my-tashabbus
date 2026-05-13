@@ -61,6 +61,39 @@ make check-tools
 
 The script prints detected versions for required tools and reports missing optional tools without failing.
 
+## Git Repository Setup
+
+If this directory has not been initialized as a Git repository yet, run:
+
+```sh
+git init
+git add .
+git commit -m "chore: add stage 0 project foundation and validation infrastructure"
+git branch -M main
+git remote add origin <repo-url>
+git push -u origin main
+```
+
+Replace `<repo-url>` with the GitHub repository URL.
+
+If the repository already exists locally, check the current state before committing:
+
+```sh
+git status --short
+```
+
+## GitHub Actions
+
+After pushing to GitHub:
+
+1. Open the GitHub repository.
+2. Go to the Actions tab.
+3. Open the latest workflow run.
+4. Inspect any failing job logs.
+5. Fix CI errors before starting Stage 1.
+
+Stage 1 can start only when either `make validate-local` passes locally or GitHub Actions CI passes successfully.
+
 ## Full Local Validation
 
 From the repository root:
