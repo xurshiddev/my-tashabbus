@@ -1,0 +1,2 @@
+-- Stage 0 baseline migration.
+-- Business tables are intentionally deferred to later stages.

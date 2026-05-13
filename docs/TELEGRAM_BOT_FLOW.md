@@ -1,0 +1,16 @@
+# Telegram Bot Flow
+
+## Stage 0 Flow
+
+1. User sends `/start`.
+2. Bot replies with: `Assalomu alaykum! My Tashabbus tizimiga xush kelibsiz.`
+3. Bot sends a `Mini Appni ochish` button when `MINI_APP_URL` is configured.
+
+## Future Flow
+
+- Link Telegram IDs to application users through an API-backed identity flow.
+- Open the Mini App with role-aware context.
+- Validate user permissions through the API before exposing workflow data.
+- Send notifications and reminders for follow-up tasks.
+
+The bot must not bypass API permissions or write directly to the database.
