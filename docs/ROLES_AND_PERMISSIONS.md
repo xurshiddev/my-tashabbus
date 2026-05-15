@@ -7,7 +7,7 @@
 - `STREET_LEADER`
 - `RESPONSIBLE_PERSON`
 
-These roles are implemented as API constants. Stage 2 adds MFY, street, and street leader assignment scoping. Household and responsible person workflows are deferred to Stage 3.
+These roles are implemented as API constants. Stage 3 adds household and responsible person assignment scoping.
 
 ## Super Admin
 
@@ -18,6 +18,12 @@ Stage 2 permissions:
 - Assign MFY chairmen.
 - Manage streets under any MFY.
 - Assign or reassign street leaders to any street.
+
+Stage 3 permissions:
+- Create, list, view, and update households in any street.
+- Assign responsible persons to any street.
+- Deactivate responsible assignments.
+- View household change logs.
 
 ## MFY Chairman
 
@@ -34,6 +40,11 @@ Stage 2 permissions:
 - Assign or reassign street leaders only for streets inside own MFY.
 - Cannot create other MFYs or manage streets outside own MFY.
 
+Stage 3 permissions:
+- Manage households only inside own MFY streets.
+- Assign responsible persons only inside own MFY streets.
+- View responsible assignments and household change logs inside own MFY.
+
 ## Street Leader
 
 - See assigned streets.
@@ -49,6 +60,11 @@ Stage 2 permissions:
 - Cannot create or update streets.
 - Cannot assign street leaders.
 
+Stage 3 permissions:
+- Create, list, view, and update households only in actively assigned streets.
+- Assign responsible persons only inside actively assigned streets.
+- View responsible assignments and household logs only for assigned streets.
+
 ## Responsible Person
 
 - See only assigned households.
@@ -62,5 +78,11 @@ Stage 2 permissions:
 Stage 2 permissions:
 - No MFY or street management permissions.
 - Can use only current-user auth endpoints until household workflows are introduced.
+
+Stage 3 permissions:
+- View only households assigned to them.
+- Update assigned household house number, total numbers, contacted numbers, reported voted numbers, status, and notes.
+- Cannot create MFYs, streets, households, or assignments.
+- Cannot view other responsible persons' households.
 
 Permission checks must be enforced by the API.

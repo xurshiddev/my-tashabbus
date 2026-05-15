@@ -8,6 +8,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Household struct {
+	ID                        pgtype.UUID
+	MfyID                     pgtype.UUID
+	StreetID                  pgtype.UUID
+	HouseNumber               string
+	TotalNumbers              int32
+	ContactedNumbers          int32
+	VotedNumbers              int32
+	Status                    string
+	Notes                     pgtype.Text
+	AssignedResponsibleUserID pgtype.UUID
+	CreatedByUserID           pgtype.UUID
+	CreatedAt                 pgtype.Timestamptz
+	UpdatedAt                 pgtype.Timestamptz
+}
+
+type HouseholdChangeLog struct {
+	ID              pgtype.UUID
+	HouseholdID     pgtype.UUID
+	ChangedByUserID pgtype.UUID
+	FieldName       string
+	OldValue        pgtype.Text
+	NewValue        pgtype.Text
+	Note            pgtype.Text
+	CreatedAt       pgtype.Timestamptz
+}
+
 type Mfy struct {
 	ID              pgtype.UUID
 	Name            string
@@ -19,6 +46,18 @@ type Mfy struct {
 	CreatedByUserID pgtype.UUID
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+}
+
+type ResponsibleAssignment struct {
+	ID                pgtype.UUID
+	StreetID          pgtype.UUID
+	ResponsibleUserID pgtype.UUID
+	AssignedByUserID  pgtype.UUID
+	FromHouseNumber   string
+	ToHouseNumber     string
+	IsActive          bool
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
 }
 
 type Street struct {

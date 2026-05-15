@@ -37,3 +37,15 @@ Browser development mode may use a dev Telegram payload only when `VITE_DEV_TELE
 5. Users without Stage 2 street scope see a friendly no-streets message.
 
 Household lists and household updates are not implemented until Stage 3.
+
+## Stage 3 My Households Flow
+
+1. Authenticated Mini App user taps `Mening xonadonlarim`.
+2. Mini App calls `GET /my/households`.
+3. RESPONSIBLE_PERSON users receive only households assigned to them.
+4. STREET_LEADER users receive households in assigned streets.
+5. MFY_CHAIRMAN users receive households in their own MFY.
+6. Users can update allowed household fields through `PATCH /households/{id}`.
+7. The API validates permissions and writes household change logs.
+
+The Mini App does not collect SMS codes and does not interact with official voting systems.

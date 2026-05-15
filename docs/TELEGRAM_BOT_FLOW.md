@@ -19,4 +19,4 @@ The bot must not bypass API permissions or write directly to the database.
 
 The bot can present the Mini App button, but Telegram identity binding and access checks are owned by the API. A user must be registered and bound to a Telegram ID before Mini App authentication can return an access token.
 
-In Stage 2, the Mini App can show streets assigned by the API. The bot still does not own permissions, street assignments, or database writes.
+In Stage 2, the Mini App can show streets assigned by the API. In Stage 3, the Mini App can show and update assigned households through the API. The bot still does not own permissions, household assignments, or database writes.

@@ -11,7 +11,9 @@ import (
 	"github.com/my-tashabbus/api/internal/http/handlers"
 	localmiddleware "github.com/my-tashabbus/api/internal/http/middleware"
 	"github.com/my-tashabbus/api/internal/modules/auth"
+	"github.com/my-tashabbus/api/internal/modules/households"
 	"github.com/my-tashabbus/api/internal/modules/mfys"
+	"github.com/my-tashabbus/api/internal/modules/responsibles"
 	"github.com/my-tashabbus/api/internal/modules/streets"
 	"github.com/my-tashabbus/api/internal/modules/users"
 )
@@ -24,6 +26,8 @@ type Config struct {
 	UserService        *users.Service
 	MFYService         *mfys.Service
 	StreetService      *streets.Service
+	HouseholdService   *households.Service
+	ResponsibleService *responsibles.Service
 }
 
 func New(cfg Config) http.Handler {
@@ -51,6 +55,8 @@ func New(cfg Config) http.Handler {
 		userHandler := users.NewHandler(cfg.UserService)
 		mfyHandler := mfys.NewHandler(cfg.MFYService)
 		streetHandler := streets.NewHandler(cfg.StreetService)
+		householdHandler := households.NewHandler(cfg.HouseholdService, log)
+		responsibleHandler := responsibles.NewHandler(cfg.ResponsibleService, log)
 		requireAuth := localmiddleware.RequireAuth(cfg.AuthService.TokenManager(), cfg.UserService)
 		requireSuperAdmin := localmiddleware.RequireRole(users.RoleSuperAdmin)
 
@@ -89,6 +95,15 @@ func New(cfg Config) http.Handler {
 			r.Post("/streets/{id}/assign-leader", streetHandler.AssignLeader)
 			r.Get("/streets/{id}/leader", streetHandler.GetLeader)
 			r.Get("/my/streets", streetHandler.MyStreets)
+			r.Post("/streets/{streetID}/households", householdHandler.Create)
+			r.Get("/streets/{streetID}/households", householdHandler.ListByStreet)
+			r.Get("/households/{id}", householdHandler.Get)
+			r.Patch("/households/{id}", householdHandler.Update)
+			r.Get("/my/households", householdHandler.MyHouseholds)
+			r.Get("/households/{id}/logs", householdHandler.Logs)
+			r.Post("/streets/{streetID}/responsibles", responsibleHandler.Create)
+			r.Get("/streets/{streetID}/responsibles", responsibleHandler.ListByStreet)
+			r.Post("/responsible-assignments/{id}/deactivate", responsibleHandler.Deactivate)
 		})
 	}
 	return r

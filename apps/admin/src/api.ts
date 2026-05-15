@@ -39,6 +39,39 @@ export type StreetLeaderAssignment = {
   is_active: boolean;
 };
 
+export type HouseholdStatus =
+  | 'NEW'
+  | 'VISITED'
+  | 'EXPLAINED'
+  | 'PARTIALLY_VOTED'
+  | 'FULLY_VOTED'
+  | 'NOT_HOME'
+  | 'CALLBACK_NEEDED'
+  | 'REFUSED'
+  | 'INVALID_INFO';
+
+export type Household = {
+  id: string;
+  mfy_id: string;
+  street_id: string;
+  house_number: string;
+  total_numbers: number;
+  contacted_numbers: number;
+  voted_numbers: number;
+  status: HouseholdStatus;
+  notes: string | null;
+  assigned_responsible_user_id: string | null;
+};
+
+export type ResponsibleAssignment = {
+  id: string;
+  street_id: string;
+  responsible_user_id: string;
+  from_house_number: string;
+  to_house_number: string;
+  is_active: boolean;
+};
+
 type TokenResponse = {
   access_token: string;
   token_type: 'Bearer';
@@ -93,6 +126,22 @@ export async function listStreets(token: string, mfyID: string): Promise<Street[
 
 export async function assignStreetLeader(token: string, streetID: string, userID: string): Promise<StreetLeaderAssignment> {
   return post<StreetLeaderAssignment>(token, `/streets/${streetID}/assign-leader`, { user_id: userID });
+}
+
+export async function createHousehold(token: string, streetID: string, payload: Record<string, unknown>): Promise<Household> {
+  return post<Household>(token, `/streets/${streetID}/households`, payload);
+}
+
+export async function listHouseholds(token: string, streetID: string): Promise<Household[]> {
+  return get<Household[]>(token, `/streets/${streetID}/households`);
+}
+
+export async function assignResponsible(token: string, streetID: string, payload: Record<string, unknown>): Promise<ResponsibleAssignment> {
+  return post<ResponsibleAssignment>(token, `/streets/${streetID}/responsibles`, payload);
+}
+
+export async function listResponsibleAssignments(token: string, streetID: string): Promise<ResponsibleAssignment[]> {
+  return get<ResponsibleAssignment[]>(token, `/streets/${streetID}/responsibles`);
 }
 
 async function get<T>(token: string, path: string): Promise<T> {

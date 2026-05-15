@@ -11,18 +11,22 @@ import (
 	"github.com/my-tashabbus/api/internal/db"
 	apirouter "github.com/my-tashabbus/api/internal/http/router"
 	"github.com/my-tashabbus/api/internal/modules/auth"
+	"github.com/my-tashabbus/api/internal/modules/households"
 	"github.com/my-tashabbus/api/internal/modules/mfys"
+	"github.com/my-tashabbus/api/internal/modules/responsibles"
 	"github.com/my-tashabbus/api/internal/modules/streets"
 	"github.com/my-tashabbus/api/internal/modules/users"
 )
 
 type App struct {
-	cfg           config.Config
-	log           *slog.Logger
-	authService   *auth.Service
-	userService   *users.Service
-	mfyService    *mfys.Service
-	streetService *streets.Service
+	cfg                config.Config
+	log                *slog.Logger
+	authService        *auth.Service
+	userService        *users.Service
+	mfyService         *mfys.Service
+	streetService      *streets.Service
+	householdService   *households.Service
+	responsibleService *responsibles.Service
 }
 
 func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error) {
@@ -43,13 +47,19 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 	}
 	mfyStore := mfys.Store(mfys.NewMemoryStore())
 	streetStore := streets.Store(streets.NewMemoryStore())
+	householdStore := households.Store(households.NewMemoryStore())
+	responsibleStore := responsibles.Store(responsibles.NewMemoryStore())
 	if pool != nil {
 		mfyStore = mfys.NewPgxStore(pool)
 		streetStore = streets.NewPgxStore(pool)
+		householdStore = households.NewPgxStore(pool)
+		responsibleStore = responsibles.NewPgxStore(pool)
 	}
 	mfyService := mfys.NewService(mfyStore, userService)
 	streetService := streets.NewService(streetStore, mfyService, userService)
-	return &App{cfg: cfg, log: log, authService: authService, userService: userService, mfyService: mfyService, streetService: streetService}, nil
+	householdService := households.NewService(householdStore, streetService)
+	responsibleService := responsibles.NewService(responsibleStore, streetService, userService, householdService)
+	return &App{cfg: cfg, log: log, authService: authService, userService: userService, mfyService: mfyService, streetService: streetService, householdService: householdService, responsibleService: responsibleService}, nil
 }
 
 func (a *App) Handler() http.Handler {
@@ -61,5 +71,7 @@ func (a *App) Handler() http.Handler {
 		UserService:        a.userService,
 		MFYService:         a.mfyService,
 		StreetService:      a.streetService,
+		HouseholdService:   a.householdService,
+		ResponsibleService: a.responsibleService,
 	})
 }

@@ -62,6 +62,17 @@ button:hover {
   background: #0f554e;
 }
 
+input,
+select {
+  background: #ffffff;
+  border: 1px solid #cbd7dc;
+  border-radius: 8px;
+  font: inherit;
+  min-height: 40px;
+  padding: 0 10px;
+  width: 100%;
+}
+
 .mode {
   color: #146c63;
   font-size: 0.85rem;
@@ -109,16 +120,31 @@ h1 {
   margin-top: 12px;
 }
 
-.street-item {
+.street-item,
+.household-item {
   border-top: 1px solid #edf2ef;
   display: grid;
   gap: 4px;
   padding-top: 10px;
 }
 
+.household-item {
+  background: #f0f6f4;
+  color: #1d252c;
+  text-align: left;
+}
+
 .street-item span,
-.street-item small {
+.street-item small,
+.household-item span,
+.household-item small {
   color: #65737d;
+}
+
+.edit-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 @media (max-width: 560px) {

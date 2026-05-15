@@ -44,6 +44,18 @@ PostgreSQL stores application data. The API owns database access. Bot and Mini A
 - STREET_LEADER can view only streets with an active assignment row.
 - Bot and Mini App call the API and do not write directly to PostgreSQL.
 
+## Stage 3 Household And Responsible Modules
+
+- The API owns household validation, responsible person assignment rules, and household audit logging.
+- `households` stores aggregate household progress only: house number, expected/contacted/reported voted counts, status, notes, and assigned responsible user.
+- `responsible_assignments` stores active or historical responsible person ranges for streets.
+- `household_change_logs` records important household edits for auditability.
+- SUPER_ADMIN can manage households and responsible assignments anywhere.
+- MFY_CHAIRMAN is scoped to households and assignments in their own MFY.
+- STREET_LEADER is scoped to actively assigned streets.
+- RESPONSIBLE_PERSON can view and update only households assigned to them.
+- The system does not store citizen credentials, SMS codes, passport data, or official voting data.
+
 ## Future Modules
 
 - Auth

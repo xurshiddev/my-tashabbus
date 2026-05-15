@@ -62,10 +62,19 @@ Stage 2 intentionally does not include households, responsible person assignment
 - Household ranges.
 - Responsible person scoped permissions.
 - Household status foundation.
+- Household change logs for important updates.
+- Admin household and responsible assignment placeholders.
+- Mini App "My Households" flow.
+
+Stage 3 intentionally does not include dashboard statistics, reports, official voting, SMS collection, or automated voting.
 
 ## Stage 4
 
-- Dashboards and statistics.
+- Dashboard and statistics foundation.
+- MFY dashboard.
+- Street dashboard.
+- Responsible person progress.
+- Status counts and safe aggregate reporting.
 
 ## Stage 5
 

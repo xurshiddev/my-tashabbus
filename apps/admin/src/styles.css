@@ -126,9 +126,11 @@ h1 {
   gap: 8px;
 }
 
-input {
+input,
+select {
   border: 1px solid #cbd7dc;
   border-radius: 8px;
+  background: #ffffff;
   font: inherit;
   min-height: 40px;
   padding: 0 10px;

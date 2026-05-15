@@ -2,14 +2,20 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
   assignChairman,
+  assignResponsible,
   assignStreetLeader,
+  createHousehold,
   createMFY,
   createStreet,
   devLoginAsSuperAdmin,
   fetchCurrentUser,
+  listHouseholds,
   listMFYs,
+  listResponsibleAssignments,
   listStreets,
+  type Household,
   type MFY,
+  type ResponsibleAssignment,
   type Street,
   type User,
 } from './api';
@@ -23,11 +29,14 @@ function App() {
   const [status, setStatus] = useState('Not authenticated');
   const [mfys, setMFYs] = useState<MFY[]>([]);
   const [streets, setStreets] = useState<Street[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [responsibleAssignments, setResponsibleAssignments] = useState<ResponsibleAssignment[]>([]);
   const [mfyID, setMFYID] = useState('');
   const [streetID, setStreetID] = useState('');
   const [chairmanUserID, setChairmanUserID] = useState('');
   const [leaderUserID, setLeaderUserID] = useState('');
-  const [stageStatus, setStageStatus] = useState('Stage 2 tools ready');
+  const [responsibleUserID, setResponsibleUserID] = useState('');
+  const [stageStatus, setStageStatus] = useState('Stage 3 tools ready');
 
   useEffect(() => {
     if (!token) {
@@ -128,6 +137,59 @@ function App() {
     }
   }
 
+  async function handleCreateHousehold(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const household = await createHousehold(token, streetID, {
+        house_number: String(form.get('house_number') ?? ''),
+        total_numbers: Number(form.get('total_numbers') || 0),
+        contacted_numbers: Number(form.get('contacted_numbers') || 0),
+        voted_numbers: Number(form.get('voted_numbers') || 0),
+        status: String(form.get('status') ?? 'NEW'),
+        notes: String(form.get('notes') ?? '') || null,
+      });
+      setHouseholds((items) => [household, ...items]);
+      setStageStatus('Household created');
+    } catch {
+      setStageStatus('Household create failed');
+    }
+  }
+
+  async function handleListHouseholds() {
+    try {
+      setHouseholds(await listHouseholds(token, streetID));
+      setStageStatus('Households loaded');
+    } catch {
+      setStageStatus('Household list failed');
+    }
+  }
+
+  async function handleAssignResponsible(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const assignment = await assignResponsible(token, streetID, {
+        user_id: responsibleUserID,
+        from_house_number: String(form.get('from_house_number') ?? ''),
+        to_house_number: String(form.get('to_house_number') ?? ''),
+      });
+      setResponsibleAssignments((items) => [assignment, ...items]);
+      setStageStatus('Responsible person assigned');
+    } catch {
+      setStageStatus('Responsible assignment failed');
+    }
+  }
+
+  async function handleListResponsibleAssignments() {
+    try {
+      setResponsibleAssignments(await listResponsibleAssignments(token, streetID));
+      setStageStatus('Responsible assignments loaded');
+    } catch {
+      setStageStatus('Responsible assignment list failed');
+    }
+  }
+
   return (
     <main className="shell">
       <section className="intro">
@@ -155,7 +217,7 @@ function App() {
         ))}
       </section>
 
-      <section className="stage-grid" aria-label="Stage 2 management">
+      <section className="stage-grid" aria-label="Stage 3 management">
         <article className="tool-panel">
           <h2>MFY Management</h2>
           <p>{stageStatus}</p>
@@ -200,6 +262,57 @@ function App() {
           <input value={streetID} onChange={(event) => setStreetID(event.target.value)} placeholder="Street ID" />
           <input value={leaderUserID} onChange={(event) => setLeaderUserID(event.target.value)} placeholder="User ID" />
           <button type="button" onClick={handleAssignLeader}>Assign Street Leader</button>
+        </article>
+
+        <article className="tool-panel">
+          <h2>Household Management</h2>
+          <input value={streetID} onChange={(event) => setStreetID(event.target.value)} placeholder="Street ID" />
+          <form onSubmit={handleCreateHousehold}>
+            <input name="house_number" placeholder="House number" />
+            <input name="total_numbers" placeholder="Total numbers" type="number" min="0" />
+            <input name="contacted_numbers" placeholder="Contacted numbers" type="number" min="0" />
+            <input name="voted_numbers" placeholder="Voted numbers" type="number" min="0" />
+            <select name="status" defaultValue="NEW">
+              <option value="NEW">NEW</option>
+              <option value="VISITED">VISITED</option>
+              <option value="EXPLAINED">EXPLAINED</option>
+              <option value="PARTIALLY_VOTED">PARTIALLY_VOTED</option>
+              <option value="FULLY_VOTED">FULLY_VOTED</option>
+              <option value="NOT_HOME">NOT_HOME</option>
+              <option value="CALLBACK_NEEDED">CALLBACK_NEEDED</option>
+              <option value="REFUSED">REFUSED</option>
+              <option value="INVALID_INFO">INVALID_INFO</option>
+            </select>
+            <input name="notes" placeholder="Notes" />
+            <button type="submit">Create Household</button>
+          </form>
+          <button type="button" onClick={handleListHouseholds}>List Households</button>
+          <div className="result-list">
+            {households.map((household) => (
+              <button type="button" key={household.id} onClick={() => setStreetID(household.street_id)}>
+                {household.house_number} - {household.status}
+              </button>
+            ))}
+          </div>
+        </article>
+
+        <article className="tool-panel">
+          <h2>Responsible Assignment</h2>
+          <input value={streetID} onChange={(event) => setStreetID(event.target.value)} placeholder="Street ID" />
+          <input value={responsibleUserID} onChange={(event) => setResponsibleUserID(event.target.value)} placeholder="Responsible user ID" />
+          <form onSubmit={handleAssignResponsible}>
+            <input name="from_house_number" placeholder="From house number" />
+            <input name="to_house_number" placeholder="To house number" />
+            <button type="submit">Assign Responsible</button>
+          </form>
+          <button type="button" onClick={handleListResponsibleAssignments}>List Responsible Assignments</button>
+          <div className="result-list">
+            {responsibleAssignments.map((assignment) => (
+              <button type="button" key={assignment.id} onClick={() => setResponsibleUserID(assignment.responsible_user_id)}>
+                {assignment.from_house_number}-{assignment.to_house_number}
+              </button>
+            ))}
+          </div>
         </article>
       </section>
     </main>

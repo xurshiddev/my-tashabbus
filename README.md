@@ -197,6 +197,51 @@ curl http://localhost:8080/my/streets \
   -H "Authorization: Bearer <token>"
 ```
 
+## Stage 3 Household And Responsible Assignment Examples
+
+Create household:
+
+```sh
+curl -X POST http://localhost:8080/streets/<street_id>/households \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"house_number":"12","total_numbers":5,"contacted_numbers":0,"voted_numbers":0,"status":"NEW","notes":"Test household"}'
+```
+
+Assign responsible person:
+
+```sh
+curl -X POST http://localhost:8080/streets/<street_id>/responsibles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"user_id":"<responsible_user_id>","from_house_number":"1","to_house_number":"20"}'
+```
+
+My households:
+
+```sh
+curl http://localhost:8080/my/households \
+  -H "Authorization: Bearer <token>"
+```
+
+Update household:
+
+```sh
+curl -X PATCH http://localhost:8080/households/<household_id> \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"house_number":"12","total_numbers":5,"contacted_numbers":4,"voted_numbers":3,"status":"PARTIALLY_VOTED","notes":"2 people need follow-up"}'
+```
+
+Household logs:
+
+```sh
+curl http://localhost:8080/households/<household_id>/logs \
+  -H "Authorization: Bearer <token>"
+```
+
+Stage 3 household data is aggregate operational tracking only. It must not include citizen credentials, SMS codes, passport data, or any official voting automation.
+
 ## Project Stages
 
 - Stage 0: project foundation.

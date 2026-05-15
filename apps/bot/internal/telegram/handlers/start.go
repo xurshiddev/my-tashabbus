@@ -7,7 +7,7 @@ import (
 	"github.com/my-tashabbus/bot/internal/telegram/keyboards"
 )
 
-const WelcomeMessage = "Assalomu alaykum! My Tashabbus tizimiga xush kelibsiz. Mini App orqali tizimga kirish va o'zingizga biriktirilgan ko'chalarni ko'rish uchun avval ro'yxatdan o'tgan bo'lishingiz kerak."
+const WelcomeMessage = "Assalomu alaykum! My Tashabbus tizimiga xush kelibsiz. Mini App orqali o'zingizga biriktirilgan ko'chalar va xonadonlarni ko'rishingiz mumkin."
 
 type MessageSender interface {
 	Send(c tgbotapi.Chattable) (tgbotapi.Message, error)
