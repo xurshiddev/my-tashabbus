@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { authenticateDevTelegram, authenticateTelegram, type User } from './api';
+import { authenticateDevTelegram, authenticateTelegram, fetchMyStreets, type Street, type User } from './api';
 import './styles.css';
 
 declare global {
@@ -20,6 +20,8 @@ function App() {
   const [insideTelegram, setInsideTelegram] = useState(false);
   const [initData, setInitData] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState(() => localStorage.getItem('my_tashabbus_miniapp_token') ?? '');
+  const [streets, setStreets] = useState<Street[]>([]);
   const [authMessage, setAuthMessage] = useState('Authentication required');
   const devTelegramAuth = import.meta.env.VITE_DEV_TELEGRAM_AUTH === 'true';
 
@@ -38,6 +40,7 @@ function App() {
       const result =
         insideTelegram && initData ? await authenticateTelegram(initData) : await authenticateDevTelegram();
       localStorage.setItem('my_tashabbus_miniapp_token', result.access_token);
+      setToken(result.access_token);
       setUser(result.user);
       setAuthMessage('Authenticated');
     } catch (error) {
@@ -46,6 +49,22 @@ function App() {
         return;
       }
       setAuthMessage('Authentication failed');
+    }
+  }
+
+  async function handleLoadMyStreets() {
+    if (!token) {
+      setAuthMessage('Authentication required');
+      return;
+    }
+    try {
+      const items = await fetchMyStreets(token);
+      setStreets(items);
+      if (items.length === 0) {
+        setAuthMessage("Sizga hali ko'cha biriktirilmagan.");
+      }
+    } catch {
+      setAuthMessage("Sizga hali ko'cha biriktirilmagan.");
     }
   }
 
@@ -70,6 +89,24 @@ function App() {
       </section>
 
       <section className="list" aria-label="Mini App placeholders">
+        <article className="panel">
+          <h2>My Streets</h2>
+          <button type="button" onClick={handleLoadMyStreets}>Load My Streets</button>
+          {streets.length === 0 ? (
+            <p>{authMessage}</p>
+          ) : (
+            <div className="street-list">
+              {streets.map((street) => (
+                <div className="street-item" key={street.id}>
+                  <strong>{street.name}</strong>
+                  <span>{street.planned_households_count} households</span>
+                  <span>{street.is_active ? 'Active' : 'Inactive'}</span>
+                  <small>{street.mfy_id}</small>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
         {sections.map((section) => (
           <article className="panel" key={section}>
             <h2>{section}</h2>

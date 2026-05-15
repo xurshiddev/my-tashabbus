@@ -27,3 +27,13 @@ The Telegram Mini App will be used by street leaders and responsible persons.
 7. If not found, API returns `USER_NOT_REGISTERED`.
 
 Browser development mode may use a dev Telegram payload only when `VITE_DEV_TELEGRAM_AUTH=true` and the API allows Telegram auth dev mode.
+
+## Stage 2 My Streets Flow
+
+1. Authenticated Mini App user taps `Load My Streets`.
+2. Mini App calls `GET /my/streets`.
+3. STREET_LEADER users receive actively assigned streets.
+4. MFY_CHAIRMAN users receive streets in their own MFY.
+5. Users without Stage 2 street scope see a friendly no-streets message.
+
+Household lists and household updates are not implemented until Stage 3.

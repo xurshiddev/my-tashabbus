@@ -5,6 +5,7 @@ BOT_DIR := apps/bot
 ADMIN_DIR := apps/admin
 MINIAPP_DIR := apps/miniapp
 COMPOSE := docker compose -f docker-compose.dev.yml
+DATABASE_URL ?= postgres://my_tashabbus:my_tashabbus_password@localhost:5432/my_tashabbus?sslmode=disable
 
 .PHONY: help check-tools dev down logs dev-api test-api build-api lint-api dev-bot test-bot build-bot lint-bot dev-admin build-admin lint-admin dev-miniapp build-miniapp lint-miniapp test build lint validate-local validate-code validate-docker sqlc-generate migrate-up migrate-down migrate-create docker-config docker-up docker-down docker-logs
 
@@ -121,11 +122,11 @@ validate-docker: ## Validate Docker Compose and API health.
 
 migrate-up: ## Apply database migrations.
 	$(call require_tool,migrate)
-	migrate -path $(API_DIR)/migrations -database "$$DATABASE_URL" up
+	migrate -path $(API_DIR)/migrations -database "$(DATABASE_URL)" up
 
 migrate-down: ## Roll back one database migration.
 	$(call require_tool,migrate)
-	migrate -path $(API_DIR)/migrations -database "$$DATABASE_URL" down 1
+	migrate -path $(API_DIR)/migrations -database "$(DATABASE_URL)" down 1
 
 migrate-create: ## Create a new migration with name=some_name.
 	$(call require_tool,migrate)

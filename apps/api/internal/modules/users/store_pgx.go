@@ -27,7 +27,7 @@ func (s *PgxStore) Create(ctx context.Context, input CreateUserInput) (User, err
 INSERT INTO users (full_name, phone, telegram_id, telegram_username, role, mfy_id)
 VALUES ($1, $2, $3, $4, $5, $6::uuid)
 RETURNING id::text, full_name, phone, telegram_id, telegram_username, role, mfy_id::text, is_active, created_at, updated_at`
-	return scanUser(s.pool.QueryRow(ctx, query, input.FullName, input.Phone, input.TelegramID, input.TelegramUsername, input.Role, uuidString(input.MFYID)))
+	return scanUser(s.pool.QueryRow(ctx, query, createUserArgs(input)...))
 }
 
 func (s *PgxStore) GetByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -71,7 +71,7 @@ UPDATE users
 SET full_name = $2, phone = $3, role = $4, mfy_id = $5::uuid, is_active = $6, updated_at = now()
 WHERE id = $1
 RETURNING id::text, full_name, phone, telegram_id, telegram_username, role, mfy_id::text, is_active, created_at, updated_at`
-	return scanUser(s.pool.QueryRow(ctx, query, id, input.FullName, input.Phone, input.Role, uuidString(input.MFYID), input.IsActive))
+	return scanUser(s.pool.QueryRow(ctx, query, updateUserArgs(id, input)...))
 }
 
 func (s *PgxStore) SetTelegramIdentity(ctx context.Context, id uuid.UUID, input SetTelegramIdentityInput) (User, error) {
@@ -80,7 +80,16 @@ UPDATE users
 SET telegram_id = $2, telegram_username = $3, updated_at = now()
 WHERE id = $1
 RETURNING id::text, full_name, phone, telegram_id, telegram_username, role, mfy_id::text, is_active, created_at, updated_at`
-	return scanUser(s.pool.QueryRow(ctx, query, id, input.TelegramID, input.TelegramUsername))
+	return scanUser(s.pool.QueryRow(ctx, query, setTelegramIdentityArgs(id, input)...))
+}
+
+func (s *PgxStore) AssignToMFY(ctx context.Context, id uuid.UUID, mfyID uuid.UUID) (User, error) {
+	const query = `
+UPDATE users
+SET mfy_id = $2, updated_at = now()
+WHERE id = $1
+RETURNING id::text, full_name, phone, telegram_id, telegram_username, role, mfy_id::text, is_active, created_at, updated_at`
+	return scanUser(s.pool.QueryRow(ctx, query, id, mfyID))
 }
 
 func (s *PgxStore) Deactivate(ctx context.Context, id uuid.UUID) (User, error) {
@@ -154,12 +163,55 @@ func scanUser(row scanner) (User, error) {
 	}, nil
 }
 
-func uuidString(id *uuid.UUID) *string {
+func createUserArgs(input CreateUserInput) []any {
+	return []any{
+		input.FullName,
+		nullableStringArg(input.Phone),
+		nullableInt64Arg(input.TelegramID),
+		nullableStringArg(input.TelegramUsername),
+		string(input.Role),
+		nullableUUIDArg(input.MFYID),
+	}
+}
+
+func updateUserArgs(id uuid.UUID, input UpdateUserInput) []any {
+	return []any{
+		id,
+		input.FullName,
+		nullableStringArg(input.Phone),
+		string(input.Role),
+		nullableUUIDArg(input.MFYID),
+		input.IsActive,
+	}
+}
+
+func setTelegramIdentityArgs(id uuid.UUID, input SetTelegramIdentityInput) []any {
+	return []any{
+		id,
+		input.TelegramID,
+		nullableStringArg(input.TelegramUsername),
+	}
+}
+
+func nullableStringArg(value *string) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableInt64Arg(value *int64) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableUUIDArg(id *uuid.UUID) any {
 	if id == nil {
 		return nil
 	}
-	value := id.String()
-	return &value
+	return id.String()
 }
 
 func stringPtr(value sql.NullString) *string {

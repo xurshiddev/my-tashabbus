@@ -88,7 +88,15 @@ h1 {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.card {
+.stage-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-top: 24px;
+}
+
+.card,
+.tool-panel {
   background: #ffffff;
   border: 1px solid #dce4e8;
   border-radius: 8px;
@@ -105,6 +113,32 @@ h1 {
   color: #65737d;
   line-height: 1.5;
   margin: 0;
+}
+
+.tool-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.tool-panel form,
+.result-list {
+  display: grid;
+  gap: 8px;
+}
+
+input {
+  border: 1px solid #cbd7dc;
+  border-radius: 8px;
+  font: inherit;
+  min-height: 40px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.result-list button {
+  background: #eef5f2;
+  color: #1d3e37;
+  text-align: left;
 }
 
 @media (max-width: 640px) {

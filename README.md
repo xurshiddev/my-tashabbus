@@ -138,6 +138,65 @@ curl http://localhost:8080/auth/me \
 
 Telegram Mini App auth uses `POST /auth/telegram` with Telegram WebApp `initData`. In production, the API requires a real `BOT_TOKEN` and validates the Telegram signature. Unregistered Telegram users receive `USER_NOT_REGISTERED`.
 
+## Stage 2 MFY And Street Examples
+
+Create MFY:
+
+```sh
+curl -X POST http://localhost:8080/mfys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"name":"Bogiston MFY","region":"Toshkent viloyati","district":"Yangiyol","target_votes":4500,"season":"2026-1"}'
+```
+
+List MFYs:
+
+```sh
+curl http://localhost:8080/mfys \
+  -H "Authorization: Bearer <token>"
+```
+
+Create street:
+
+```sh
+curl -X POST http://localhost:8080/mfys/<mfy_id>/streets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"name":"Mustaqillik kochasi","planned_households_count":120,"notes":"Main street"}'
+```
+
+List streets:
+
+```sh
+curl http://localhost:8080/mfys/<mfy_id>/streets \
+  -H "Authorization: Bearer <token>"
+```
+
+Assign chairman:
+
+```sh
+curl -X POST http://localhost:8080/mfys/<mfy_id>/assign-chairman \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"user_id":"<chairman_user_id>"}'
+```
+
+Assign street leader:
+
+```sh
+curl -X POST http://localhost:8080/streets/<street_id>/assign-leader \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"user_id":"<street_leader_user_id>"}'
+```
+
+My streets:
+
+```sh
+curl http://localhost:8080/my/streets \
+  -H "Authorization: Bearer <token>"
+```
+
 ## Project Stages
 
 - Stage 0: project foundation.

@@ -122,6 +122,19 @@ func (s *MemoryStore) SetTelegramIdentity(ctx context.Context, id uuid.UUID, inp
 	return user, nil
 }
 
+func (s *MemoryStore) AssignToMFY(ctx context.Context, id uuid.UUID, mfyID uuid.UUID) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, ok := s.users[id]
+	if !ok {
+		return User{}, ErrUserNotFound
+	}
+	user.MFYID = &mfyID
+	user.UpdatedAt = time.Now().UTC()
+	s.users[id] = user
+	return user, nil
+}
+
 func (s *MemoryStore) Deactivate(ctx context.Context, id uuid.UUID) (User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

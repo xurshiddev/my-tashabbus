@@ -3,6 +3,8 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/my-tashabbus/api/internal/http/requestcontext"
@@ -12,10 +14,15 @@ import (
 
 type Handler struct {
 	service *Service
+	log     *slog.Logger
 }
 
-func NewHandler(service *Service) Handler {
-	return Handler{service: service}
+func NewHandler(service *Service, loggers ...*slog.Logger) Handler {
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	if len(loggers) > 0 && loggers[0] != nil {
+		log = loggers[0]
+	}
+	return Handler{service: service, log: log}
 }
 
 func (h Handler) Me(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +42,7 @@ func (h Handler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.DevLogin(r.Context(), input)
 	if err != nil {
-		writeAuthError(w, err)
+		h.writeAuthError(w, "dev_login", err)
 		return
 	}
 	response.Data(w, http.StatusOK, result)
@@ -49,13 +56,13 @@ func (h Handler) TelegramLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.TelegramLogin(r.Context(), input)
 	if err != nil {
-		writeAuthError(w, err)
+		h.writeAuthError(w, "telegram_login", err)
 		return
 	}
 	response.Data(w, http.StatusOK, result)
 }
 
-func writeAuthError(w http.ResponseWriter, err error) {
+func (h Handler) writeAuthError(w http.ResponseWriter, operation string, err error) {
 	switch {
 	case errors.Is(err, ErrDevLoginDisabled):
 		response.ErrorCode(w, http.StatusForbidden, "FORBIDDEN", "Development login is disabled")
@@ -68,6 +75,7 @@ func writeAuthError(w http.ResponseWriter, err error) {
 	case errors.Is(err, users.ErrTelegramIDConflict):
 		response.ErrorCode(w, http.StatusConflict, "CONFLICT", "Telegram identity is already assigned")
 	default:
+		h.log.Error("auth request failed", "operation", operation, "error", err)
 		response.ErrorCode(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")
 	}
 }

@@ -33,6 +33,17 @@ PostgreSQL stores application data. The API owns database access. Bot and Mini A
 - API middleware loads the current user, rejects inactive users, and applies role guards.
 - The Bot opens the Mini App but does not own authentication, permissions, or database writes.
 
+## Stage 2 MFY And Street Modules
+
+- The API owns MFY, street, and street leader assignment business rules.
+- `mfys` stores MFY metadata and optional target vote planning context. It does not implement voting logic.
+- `streets` stores streets inside an MFY and planned household counts. Household records are deferred to Stage 3.
+- `street_leader_assignments` links one active street leader to a street at a time.
+- SUPER_ADMIN can manage all MFYs and streets.
+- MFY_CHAIRMAN is scoped by `users.mfy_id`.
+- STREET_LEADER can view only streets with an active assignment row.
+- Bot and Mini App call the API and do not write directly to PostgreSQL.
+
 ## Future Modules
 
 - Auth

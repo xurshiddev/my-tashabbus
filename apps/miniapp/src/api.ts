@@ -5,6 +5,14 @@ export type User = {
   telegram_id: number | null;
 };
 
+export type Street = {
+  id: string;
+  mfy_id: string;
+  name: string;
+  planned_households_count: number;
+  is_active: boolean;
+};
+
 type TokenResponse = {
   access_token: string;
   user: User;
@@ -40,6 +48,13 @@ export async function authenticateDevTelegram(): Promise<TokenResponse> {
     }),
   });
   return unwrap<TokenResponse>(response);
+}
+
+export async function fetchMyStreets(token: string): Promise<Street[]> {
+  const response = await fetch(`${apiBaseUrl}/my/streets`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return unwrap<Street[]>(response);
 }
 
 async function unwrap<T>(response: Response): Promise<T> {

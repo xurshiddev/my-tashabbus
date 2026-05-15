@@ -18,6 +18,16 @@ type DataResponse struct {
 	Data any `json:"data"`
 }
 
+type PaginatedResponse struct {
+	Data       any        `json:"data"`
+	Pagination Pagination `json:"pagination"`
+}
+
+type Pagination struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
 func JSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -36,4 +46,14 @@ func ErrorCode(w http.ResponseWriter, status int, code, message string) {
 
 func Data(w http.ResponseWriter, status int, payload any) {
 	JSON(w, status, DataResponse{Data: payload})
+}
+
+func Paginated(w http.ResponseWriter, status int, payload any, limit, offset int) {
+	JSON(w, status, PaginatedResponse{
+		Data: payload,
+		Pagination: Pagination{
+			Limit:  limit,
+			Offset: offset,
+		},
+	})
 }

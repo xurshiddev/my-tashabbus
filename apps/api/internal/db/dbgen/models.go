@@ -8,6 +8,41 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Mfy struct {
+	ID              pgtype.UUID
+	Name            string
+	Region          pgtype.Text
+	District        pgtype.Text
+	TargetVotes     pgtype.Int4
+	Season          pgtype.Text
+	IsActive        bool
+	CreatedByUserID pgtype.UUID
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type Street struct {
+	ID                     pgtype.UUID
+	MfyID                  pgtype.UUID
+	Name                   string
+	PlannedHouseholdsCount int32
+	Notes                  pgtype.Text
+	IsActive               bool
+	CreatedByUserID        pgtype.UUID
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+}
+
+type StreetLeaderAssignment struct {
+	ID               pgtype.UUID
+	StreetID         pgtype.UUID
+	UserID           pgtype.UUID
+	AssignedByUserID pgtype.UUID
+	IsActive         bool
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
 type User struct {
 	ID               pgtype.UUID
 	FullName         string

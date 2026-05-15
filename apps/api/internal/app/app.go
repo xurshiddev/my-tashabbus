@@ -6,24 +6,31 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/my-tashabbus/api/internal/config"
 	"github.com/my-tashabbus/api/internal/db"
 	apirouter "github.com/my-tashabbus/api/internal/http/router"
 	"github.com/my-tashabbus/api/internal/modules/auth"
+	"github.com/my-tashabbus/api/internal/modules/mfys"
+	"github.com/my-tashabbus/api/internal/modules/streets"
 	"github.com/my-tashabbus/api/internal/modules/users"
 )
 
 type App struct {
-	cfg         config.Config
-	log         *slog.Logger
-	authService *auth.Service
-	userService *users.Service
+	cfg           config.Config
+	log           *slog.Logger
+	authService   *auth.Service
+	userService   *users.Service
+	mfyService    *mfys.Service
+	streetService *streets.Service
 }
 
 func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error) {
+	var pool *pgxpool.Pool
 	userStore := users.Store(users.NewMemoryStore())
 	if cfg.DatabaseURL != "" {
-		pool, err := db.Open(ctx, cfg.DatabaseURL)
+		var err error
+		pool, err = db.Open(ctx, cfg.DatabaseURL)
 		if err != nil {
 			return nil, fmt.Errorf("open database: %w", err)
 		}
@@ -34,7 +41,15 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 	if err != nil {
 		return nil, fmt.Errorf("create auth service: %w", err)
 	}
-	return &App{cfg: cfg, log: log, authService: authService, userService: userService}, nil
+	mfyStore := mfys.Store(mfys.NewMemoryStore())
+	streetStore := streets.Store(streets.NewMemoryStore())
+	if pool != nil {
+		mfyStore = mfys.NewPgxStore(pool)
+		streetStore = streets.NewPgxStore(pool)
+	}
+	mfyService := mfys.NewService(mfyStore, userService)
+	streetService := streets.NewService(streetStore, mfyService, userService)
+	return &App{cfg: cfg, log: log, authService: authService, userService: userService, mfyService: mfyService, streetService: streetService}, nil
 }
 
 func (a *App) Handler() http.Handler {
@@ -44,5 +59,7 @@ func (a *App) Handler() http.Handler {
 		Logger:             a.log,
 		AuthService:        a.authService,
 		UserService:        a.userService,
+		MFYService:         a.mfyService,
+		StreetService:      a.streetService,
 	})
 }

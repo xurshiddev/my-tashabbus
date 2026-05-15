@@ -15,6 +15,7 @@ type Store interface {
 	List(ctx context.Context, limit, offset int) ([]User, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateUserInput) (User, error)
 	SetTelegramIdentity(ctx context.Context, id uuid.UUID, input SetTelegramIdentityInput) (User, error)
+	AssignToMFY(ctx context.Context, id uuid.UUID, mfyID uuid.UUID) (User, error)
 	Deactivate(ctx context.Context, id uuid.UUID) (User, error)
 	Activate(ctx context.Context, id uuid.UUID) (User, error)
 }
@@ -87,6 +88,13 @@ func (s *Service) SetTelegramIdentity(ctx context.Context, id uuid.UUID, input S
 		return User{}, ErrStoreNotConfigured
 	}
 	return s.store.SetTelegramIdentity(ctx, id, input)
+}
+
+func (s *Service) AssignToMFY(ctx context.Context, id uuid.UUID, mfyID uuid.UUID) (User, error) {
+	if s.store == nil {
+		return User{}, ErrStoreNotConfigured
+	}
+	return s.store.AssignToMFY(ctx, id, mfyID)
 }
 
 func (s *Service) Deactivate(ctx context.Context, id uuid.UUID) (User, error) {

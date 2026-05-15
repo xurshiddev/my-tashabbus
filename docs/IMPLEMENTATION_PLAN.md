@@ -47,11 +47,21 @@ Stage 1 intentionally does not include MFY, street, household, assignment, dashb
 
 ## Stage 2
 
-- MFY and streets.
+- MFY table and API module.
+- Streets table and API module.
+- Street leader assignment table and API module.
+- Scoped Stage 2 permissions for SUPER_ADMIN, MFY_CHAIRMAN, and STREET_LEADER.
+- Admin MFY/street management placeholders.
+- Mini App "My Streets" view.
+
+Stage 2 intentionally does not include households, responsible person assignment ranges, vote tracking, dashboard statistics, reports, official voting, or SMS collection.
 
 ## Stage 3
 
-- Households and assignments.
+- Households and responsible person assignments.
+- Household ranges.
+- Responsible person scoped permissions.
+- Household status foundation.
 
 ## Stage 4
 
