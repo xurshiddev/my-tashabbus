@@ -1,6 +1,9 @@
 package keyboards
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestMiniAppKeyboardWithURL(t *testing.T) {
 	keyboard := MiniAppKeyboard("https://example.com/miniapp")
@@ -11,8 +14,30 @@ func TestMiniAppKeyboardWithURL(t *testing.T) {
 	if button.Text != MiniAppButtonText {
 		t.Fatalf("expected button text %q, got %q", MiniAppButtonText, button.Text)
 	}
-	if button.URL == nil || *button.URL != "https://example.com/miniapp" {
-		t.Fatalf("expected button URL to be set")
+	if button.WebApp == nil || button.WebApp.URL != "https://example.com/miniapp" {
+		t.Fatalf("expected web app URL to be set")
+	}
+	payload, err := json.Marshal(keyboard)
+	if err != nil {
+		t.Fatalf("marshal keyboard: %v", err)
+	}
+
+	var decoded struct {
+		InlineKeyboard [][]map[string]any `json:"inline_keyboard"`
+	}
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("unmarshal keyboard: %v", err)
+	}
+	buttonPayload := decoded.InlineKeyboard[0][0]
+	if _, ok := buttonPayload["url"]; ok {
+		t.Fatalf("expected no root URL button field, got %s", string(payload))
+	}
+	webApp, ok := buttonPayload["web_app"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected web_app button payload, got %s", string(payload))
+	}
+	if webApp["url"] != "https://example.com/miniapp" {
+		t.Fatalf("expected web_app URL, got %v", webApp["url"])
 	}
 }
 

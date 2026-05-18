@@ -18,50 +18,88 @@ type TelegramValidator struct {
 	now      func() time.Time
 }
 
+type TelegramValidationDiagnostics struct {
+	InitDataPresent bool
+	InitDataLength  int
+	TelegramUserID  *int64
+	AuthDate        *time.Time
+	ServerTime      time.Time
+	AgeSeconds      *int64
+	MaxAgeSeconds   int64
+	Result          string
+}
+
 func NewTelegramValidator(botToken string, ttl time.Duration) *TelegramValidator {
 	return &TelegramValidator{botToken: botToken, ttl: ttl, now: time.Now}
 }
 
 func (v *TelegramValidator) Validate(initData string) (TelegramUser, error) {
+	user, _, err := v.ValidateWithDiagnostics(initData)
+	return user, err
+}
+
+func (v *TelegramValidator) ValidateWithDiagnostics(initData string) (TelegramUser, TelegramValidationDiagnostics, error) {
+	diagnostics := TelegramValidationDiagnostics{
+		InitDataPresent: initData != "",
+		InitDataLength:  len(initData),
+		ServerTime:      v.now(),
+		MaxAgeSeconds:   int64(v.ttl.Seconds()),
+		Result:          "started",
+	}
 	if v.botToken == "" {
-		return TelegramUser{}, ErrTelegramTokenNeeded
+		diagnostics.Result = "bot_token_missing"
+		return TelegramUser{}, diagnostics, ErrTelegramTokenNeeded
 	}
 	values, err := url.ParseQuery(initData)
 	if err != nil {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "parse_failed"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	hash := values.Get("hash")
 	if hash == "" {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "hash_missing"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	authDateRaw := values.Get("auth_date")
 	if authDateRaw == "" {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "auth_date_missing"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	authDateUnix, err := strconv.ParseInt(authDateRaw, 10, 64)
 	if err != nil {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "auth_date_invalid"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	authDate := time.Unix(authDateUnix, 0)
-	if v.now().Sub(authDate) > v.ttl {
-		return TelegramUser{}, ErrOldInitData
+	diagnostics.AuthDate = &authDate
+	ageSeconds := int64(diagnostics.ServerTime.Sub(authDate).Seconds())
+	diagnostics.AgeSeconds = &ageSeconds
+	if diagnostics.ServerTime.Sub(authDate) > v.ttl {
+		diagnostics.Result = "expired"
+		return TelegramUser{}, diagnostics, ErrOldInitData
 	}
 
 	if !v.validHash(values, hash) {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "hash_invalid"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	userRaw := values.Get("user")
 	if userRaw == "" {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "user_missing"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	var user TelegramUser
 	if err := json.Unmarshal([]byte(userRaw), &user); err != nil {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "user_json_invalid"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
 	if user.ID == 0 {
-		return TelegramUser{}, ErrInvalidInitData
+		diagnostics.Result = "user_id_missing"
+		return TelegramUser{}, diagnostics, ErrInvalidInitData
 	}
-	return user, nil
+	diagnostics.TelegramUserID = &user.ID
+	diagnostics.Result = "valid"
+	return user, diagnostics, nil
 }
 
 func (v *TelegramValidator) validHash(values url.Values, hash string) bool {

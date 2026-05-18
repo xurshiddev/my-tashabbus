@@ -21,6 +21,7 @@ type Assignment struct {
 type CreateAssignmentInput struct {
 	StreetID          uuid.UUID  `json:"-"`
 	ResponsibleUserID uuid.UUID  `json:"user_id"`
+	TelegramID        *int64     `json:"telegram_id"`
 	AssignedByUserID  *uuid.UUID `json:"-"`
 	FromHouseNumber   string     `json:"from_house_number"`
 	ToHouseNumber     string     `json:"to_house_number"`

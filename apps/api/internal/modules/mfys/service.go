@@ -86,6 +86,23 @@ func (s *Service) AssignChairman(ctx context.Context, current users.User, mfyID,
 	return s.users.AssignToMFY(ctx, userID, mfyID)
 }
 
+func (s *Service) EnsureDeploymentMFY(ctx context.Context, name string) (MFY, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "My Tashabbus MFY"
+	}
+	items, err := s.store.List(ctx, 100, 0)
+	if err != nil {
+		return MFY{}, err
+	}
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.Name), name) {
+			return item, nil
+		}
+	}
+	return s.store.Create(ctx, CreateMFYInput{Name: name})
+}
+
 func (s *Service) CanAccessMFY(current users.User, mfyID uuid.UUID) bool {
 	return s.canAccessMFY(current, mfyID)
 }

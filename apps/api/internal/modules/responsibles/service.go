@@ -37,10 +37,11 @@ func (s *Service) Create(ctx context.Context, current users.User, streetID uuid.
 	if err := validateCreate(input); err != nil {
 		return Assignment{}, err
 	}
-	responsible, err := s.users.GetByID(ctx, input.ResponsibleUserID)
+	responsible, err := s.responsibleUser(ctx, input)
 	if err != nil {
 		return Assignment{}, err
 	}
+	input.ResponsibleUserID = responsible.ID
 	if responsible.Role != users.RoleResponsiblePerson {
 		return Assignment{}, ErrResponsibleRoleRequired
 	}
@@ -63,6 +64,13 @@ func (s *Service) Create(ctx context.Context, current users.User, streetID uuid.
 		_ = s.households.AssignResponsibleByNumericRange(ctx, street.ID, responsible.ID, from, to, &current.ID)
 	}
 	return assignment, nil
+}
+
+func (s *Service) responsibleUser(ctx context.Context, input CreateAssignmentInput) (users.User, error) {
+	if input.TelegramID != nil {
+		return s.users.GetByTelegramID(ctx, *input.TelegramID)
+	}
+	return s.users.GetByID(ctx, input.ResponsibleUserID)
 }
 
 func (s *Service) ListByStreet(ctx context.Context, current users.User, streetID uuid.UUID, limit, offset int) ([]Assignment, error) {

@@ -63,6 +63,17 @@ export type Household = {
   assigned_responsible_user_id: string | null;
 };
 
+export type HouseholdLog = {
+  id: string;
+  household_id: string;
+  changed_by_user_id: string | null;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
+  note: string | null;
+  created_at: string;
+};
+
 export type ResponsibleAssignment = {
   id: string;
   street_id: string;
@@ -72,98 +83,213 @@ export type ResponsibleAssignment = {
   is_active: boolean;
 };
 
-type TokenResponse = {
+export type TokenResponse = {
   access_token: string;
   token_type: 'Bearer';
   expires_in: number;
   user: User;
 };
 
-type ApiResponse<T> = {
-  data: T;
+type ApiEnvelope<T> = {
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
 };
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+export type ApiErrorCode =
+  | 'VALIDATION_ERROR'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'USER_NOT_REGISTERED'
+  | 'NETWORK_ERROR'
+  | 'API_URL_MISSING'
+  | 'API_ERROR';
+
+export class ApiClientError extends Error {
+  code: ApiErrorCode;
+  status?: number;
+
+  constructor(code: ApiErrorCode, message: string, status?: number) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+export const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080').trim();
+
+const isDevelopment = import.meta.env.DEV;
+
+export function friendlyError(error: unknown): string {
+  if (!(error instanceof ApiClientError)) {
+    return 'Kutilmagan xatolik yuz berdi.';
+  }
+  switch (error.code) {
+    case 'UNAUTHORIZED':
+      return 'Sessiya tugagan. Qayta kiring.';
+    case 'FORBIDDEN':
+      return "Bu amal uchun ruxsat yo'q.";
+    case 'CONFLICT':
+      return error.message || 'Bu maʼlumot allaqachon mavjud.';
+    case 'NETWORK_ERROR':
+      return 'API bilan ulanishda xatolik. Ngrok URL yoki internet ulanishini tekshiring.';
+    case 'API_URL_MISSING':
+      return 'API URL sozlanmagan. VITE_API_BASE_URL ni tekshiring.';
+    case 'VALIDATION_ERROR':
+      return error.message || "Ma'lumotlarni tekshiring.";
+    default:
+      return error.message || 'Soʻrov bajarilmadi.';
+  }
+}
+
+export function tokenStore() {
+  const key = 'my_tashabbus_admin_token';
+  return {
+    get: () => localStorage.getItem(key) ?? '',
+    set: (token: string) => localStorage.setItem(key, token),
+    clear: () => localStorage.removeItem(key),
+  };
+}
 
 export async function devLoginAsSuperAdmin(): Promise<TokenResponse> {
-  const response = await fetch(`${apiBaseUrl}/auth/dev-login`, {
+  return request<TokenResponse>('/auth/dev-login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      full_name: 'Dev Super Admin',
-      role: 'SUPER_ADMIN',
-    }),
+    body: { full_name: 'Dev Super Admin', role: 'SUPER_ADMIN' },
   });
-  return unwrap<TokenResponse>(response);
 }
 
 export async function fetchCurrentUser(token: string): Promise<User> {
-  const response = await fetch(`${apiBaseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return unwrap<User>(response);
+  return request<User>('/auth/me', { token });
+}
+
+export async function createUser(token: string, payload: Record<string, unknown>): Promise<User> {
+  return request<User>('/users/', { method: 'POST', token, body: payload });
+}
+
+export async function listUsers(token: string): Promise<User[]> {
+  return request<User[]>('/users/?limit=100&offset=0', { token });
+}
+
+export async function bindTelegram(token: string, userID: string, payload: Record<string, unknown>): Promise<User> {
+  return request<User>(`/users/${userID}/telegram`, { method: 'PATCH', token, body: payload });
 }
 
 export async function createMFY(token: string, payload: Record<string, unknown>): Promise<MFY> {
-  return post<MFY>(token, '/mfys', payload);
+  return request<MFY>('/mfys', { method: 'POST', token, body: payload });
 }
 
 export async function listMFYs(token: string): Promise<MFY[]> {
-  return get<MFY[]>(token, '/mfys');
+  return request<MFY[]>('/mfys?limit=100&offset=0', { token });
 }
 
 export async function assignChairman(token: string, mfyID: string, userID: string): Promise<User> {
-  return post<User>(token, `/mfys/${mfyID}/assign-chairman`, { user_id: userID });
+  return request<User>(`/mfys/${mfyID}/assign-chairman`, { method: 'POST', token, body: { user_id: userID } });
 }
 
 export async function createStreet(token: string, mfyID: string, payload: Record<string, unknown>): Promise<Street> {
-  return post<Street>(token, `/mfys/${mfyID}/streets`, payload);
+  return request<Street>(`/mfys/${mfyID}/streets`, { method: 'POST', token, body: payload });
 }
 
 export async function listStreets(token: string, mfyID: string): Promise<Street[]> {
-  return get<Street[]>(token, `/mfys/${mfyID}/streets`);
+  return request<Street[]>(`/mfys/${mfyID}/streets?limit=200&offset=0`, { token });
 }
 
 export async function assignStreetLeader(token: string, streetID: string, userID: string): Promise<StreetLeaderAssignment> {
-  return post<StreetLeaderAssignment>(token, `/streets/${streetID}/assign-leader`, { user_id: userID });
+  return request<StreetLeaderAssignment>(`/streets/${streetID}/assign-leader`, {
+    method: 'POST',
+    token,
+    body: { user_id: userID },
+  });
 }
 
 export async function createHousehold(token: string, streetID: string, payload: Record<string, unknown>): Promise<Household> {
-  return post<Household>(token, `/streets/${streetID}/households`, payload);
+  return request<Household>(`/streets/${streetID}/households`, { method: 'POST', token, body: payload });
 }
 
 export async function listHouseholds(token: string, streetID: string): Promise<Household[]> {
-  return get<Household[]>(token, `/streets/${streetID}/households`);
+  return request<Household[]>(`/streets/${streetID}/households?limit=200&offset=0`, { token });
+}
+
+export async function updateHousehold(token: string, householdID: string, payload: Record<string, unknown>): Promise<Household> {
+  return request<Household>(`/households/${householdID}`, { method: 'PATCH', token, body: payload });
+}
+
+export async function listHouseholdLogs(token: string, householdID: string): Promise<HouseholdLog[]> {
+  return request<HouseholdLog[]>(`/households/${householdID}/logs?limit=100&offset=0`, { token });
 }
 
 export async function assignResponsible(token: string, streetID: string, payload: Record<string, unknown>): Promise<ResponsibleAssignment> {
-  return post<ResponsibleAssignment>(token, `/streets/${streetID}/responsibles`, payload);
+  return request<ResponsibleAssignment>(`/streets/${streetID}/responsibles`, { method: 'POST', token, body: payload });
 }
 
 export async function listResponsibleAssignments(token: string, streetID: string): Promise<ResponsibleAssignment[]> {
-  return get<ResponsibleAssignment[]>(token, `/streets/${streetID}/responsibles`);
+  return request<ResponsibleAssignment[]>(`/streets/${streetID}/responsibles?limit=200&offset=0`, { token });
 }
 
-async function get<T>(token: string, path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return unwrap<T>(response);
-}
-
-async function post<T>(token: string, path: string, payload: Record<string, unknown>): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+export async function deactivateResponsibleAssignment(token: string, assignmentID: string): Promise<ResponsibleAssignment> {
+  return request<ResponsibleAssignment>(`/responsible-assignments/${assignmentID}/deactivate`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    token,
   });
-  return unwrap<T>(response);
 }
 
-async function unwrap<T>(response: Response): Promise<T> {
-  const body = (await response.json()) as ApiResponse<T>;
-  if (!response.ok) {
-    throw new Error('API request failed');
+async function request<T>(
+  path: string,
+  options: { method?: string; token?: string; body?: Record<string, unknown> } = {},
+): Promise<T> {
+  if (!apiBaseUrl) {
+    throw new ApiClientError('API_URL_MISSING', 'API URL is not configured');
   }
-  return body.data;
+
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const url = `${apiBaseUrl}${path}`;
+  debug('api request', { method: options.method ?? 'GET', url });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (error) {
+    debug('api network error', error);
+    throw new ApiClientError('NETWORK_ERROR', 'Network request failed');
+  }
+
+  let envelope: ApiEnvelope<T>;
+  try {
+    envelope = (await response.json()) as ApiEnvelope<T>;
+  } catch (error) {
+    debug('api json parse error', error);
+    throw new ApiClientError('API_ERROR', 'API response could not be read', response.status);
+  }
+
+  if (!response.ok || envelope.error) {
+    throw new ApiClientError(
+      (envelope.error?.code as ApiErrorCode | undefined) ?? 'API_ERROR',
+      envelope.error?.message ?? 'API request failed',
+      response.status,
+    );
+  }
+
+  return envelope.data as T;
+}
+
+function debug(message: string, value?: unknown) {
+  if (isDevelopment) {
+    console.debug(`[admin-api] ${message}`, value ?? '');
+  }
 }

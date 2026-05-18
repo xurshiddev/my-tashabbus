@@ -68,6 +68,25 @@ Stage 2 intentionally does not include households, responsible person assignment
 
 Stage 3 intentionally does not include dashboard statistics, reports, official voting, SMS collection, or automated voting.
 
+## Cleanup-1
+
+- Align documentation and env examples with the single-MFY product decision.
+- Prefer `TELEGRAM_BOT_TOKEN`; keep `BOT_TOKEN` only as a legacy fallback.
+- Document that one bot belongs to one MFY and another MFY uses another deployment/env set.
+- Document that the Mini App authenticates protected requests with `X-Telegram-Init-Data`.
+- Keep Admin/JWT as legacy/development tooling only.
+- Do not normalize Mini App endpoint names yet; document the current names.
+- Document that `APP_MFY_SLUG` is currently config-level metadata and is not persisted in the database.
+
+Cleanup-1 intentionally does not add street creation, street leader assignment, progress dashboards, statistics, reports, official voting, or SMS collection.
+
+## Next MVP Workflow Work
+
+- Add Mini App chairman street creation.
+- Add Mini App street leader assignment by Telegram ID.
+- Add focused route tests for Mini App owner bootstrap and role-scoped workflows.
+- Run real Telegram Mini App testing end to end before Stage 4.
+
 ## Stage 4
 
 - Dashboard and statistics foundation.

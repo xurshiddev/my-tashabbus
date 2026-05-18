@@ -1,14 +1,28 @@
 package keyboards
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-
 const MiniAppButtonText = "Mini Appni ochish"
 
-func MiniAppKeyboard(miniAppURL string) tgbotapi.InlineKeyboardMarkup {
+type WebAppInfo struct {
+	URL string `json:"url"`
+}
+
+type WebAppInlineKeyboardButton struct {
+	Text   string      `json:"text"`
+	WebApp *WebAppInfo `json:"web_app,omitempty"`
+}
+
+type WebAppInlineKeyboardMarkup struct {
+	InlineKeyboard [][]WebAppInlineKeyboardButton `json:"inline_keyboard"`
+}
+
+func MiniAppKeyboard(miniAppURL string) WebAppInlineKeyboardMarkup {
 	if miniAppURL == "" {
-		return tgbotapi.NewInlineKeyboardMarkup()
+		return WebAppInlineKeyboardMarkup{}
 	}
 
-	button := tgbotapi.NewInlineKeyboardButtonURL(MiniAppButtonText, miniAppURL)
-	return tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(button))
+	button := WebAppInlineKeyboardButton{
+		Text:   MiniAppButtonText,
+		WebApp: &WebAppInfo{URL: miniAppURL},
+	}
+	return WebAppInlineKeyboardMarkup{InlineKeyboard: [][]WebAppInlineKeyboardButton{{button}}}
 }

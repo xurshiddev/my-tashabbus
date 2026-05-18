@@ -43,7 +43,7 @@ func New(cfg Config) http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", localmiddleware.TelegramInitDataHeader, "ngrok-skip-browser-warning"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
 		MaxAge:           300,
@@ -57,7 +57,17 @@ func New(cfg Config) http.Handler {
 		streetHandler := streets.NewHandler(cfg.StreetService)
 		householdHandler := households.NewHandler(cfg.HouseholdService, log)
 		responsibleHandler := responsibles.NewHandler(cfg.ResponsibleService, log)
-		requireAuth := localmiddleware.RequireAuth(cfg.AuthService.TokenManager(), cfg.UserService)
+		requireAuth := localmiddleware.RequireAuthWithDiagnostics(
+			cfg.AuthService.TokenManager(),
+			cfg.UserService,
+			log,
+			cfg.AuthService.AppEnv() != "production",
+		)
+		requireTelegramMiniApp := localmiddleware.RequireTelegramInitData(
+			cfg.AuthService,
+			log,
+			cfg.AuthService.AppEnv() != "production",
+		)
 		requireSuperAdmin := localmiddleware.RequireRole(users.RoleSuperAdmin)
 
 		r.Route("/auth", func(r chi.Router) {
@@ -103,6 +113,20 @@ func New(cfg Config) http.Handler {
 			r.Get("/households/{id}/logs", householdHandler.Logs)
 			r.Post("/streets/{streetID}/responsibles", responsibleHandler.Create)
 			r.Get("/streets/{streetID}/responsibles", responsibleHandler.ListByStreet)
+			r.Post("/responsible-assignments/{id}/deactivate", responsibleHandler.Deactivate)
+		})
+
+		r.Route("/miniapp", func(r chi.Router) {
+			r.Use(requireTelegramMiniApp)
+			r.Get("/me", authHandler.MiniAppMe)
+			r.Get("/my/streets", streetHandler.MyStreets)
+			r.Get("/my/households", householdHandler.MyHouseholds)
+			r.Get("/streets/{streetID}/households", householdHandler.ListByStreet)
+			r.Post("/streets/{streetID}/households", householdHandler.Create)
+			r.Get("/streets/{streetID}/responsibles", responsibleHandler.ListByStreet)
+			r.Post("/streets/{streetID}/responsibles", responsibleHandler.Create)
+			r.Patch("/households/{id}", householdHandler.Update)
+			r.Get("/households/{id}/logs", householdHandler.Logs)
 			r.Post("/responsible-assignments/{id}/deactivate", responsibleHandler.Deactivate)
 		})
 	}

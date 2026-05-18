@@ -7,7 +7,7 @@ MINIAPP_DIR := apps/miniapp
 COMPOSE := docker compose -f docker-compose.dev.yml
 DATABASE_URL ?= postgres://my_tashabbus:my_tashabbus_password@localhost:5432/my_tashabbus?sslmode=disable
 
-.PHONY: help check-tools dev down logs dev-api test-api build-api lint-api dev-bot test-bot build-bot lint-bot dev-admin build-admin lint-admin dev-miniapp build-miniapp lint-miniapp test build lint validate-local validate-code validate-docker sqlc-generate migrate-up migrate-down migrate-create docker-config docker-up docker-down docker-logs
+.PHONY: help check-tools dev down logs dev-api test-api build-api lint-api dev-bot test-bot build-bot lint-bot dev-admin build-admin lint-admin dev-miniapp build-miniapp lint-miniapp test build lint validate-local validate-code validate-docker bind-telegram-admin sqlc-generate migrate-up migrate-down migrate-create docker-config docker-up docker-down docker-logs
 
 define require_tool
 	@command -v $(1) >/dev/null 2>&1 || (echo "Required command '$(1)' was not found. Install it and retry this target." && exit 127)
@@ -119,6 +119,9 @@ validate-docker: ## Validate Docker Compose and API health.
 	echo "API health check failed"; \
 	$(COMPOSE) logs api; \
 	exit 1
+
+bind-telegram-admin: ## Bind local admin Telegram identity for real Mini App testing.
+	./scripts/bind-telegram-admin.sh
 
 migrate-up: ## Apply database migrations.
 	$(call require_tool,migrate)

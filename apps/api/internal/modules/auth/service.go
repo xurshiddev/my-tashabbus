@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/my-tashabbus/api/internal/config"
@@ -14,6 +15,7 @@ type Service struct {
 	users             *users.Service
 	tokens            *TokenManager
 	telegramValidator *TelegramValidator
+	deploymentMFY     *DeploymentMFY
 }
 
 func NewService(cfg config.Config, usersService *users.Service) (*Service, error) {
@@ -31,6 +33,126 @@ func NewService(cfg config.Config, usersService *users.Service) (*Service, error
 
 func (s *Service) TokenManager() *TokenManager {
 	return s.tokens
+}
+
+func (s *Service) AppEnv() string {
+	return s.cfg.AppEnv
+}
+
+func (s *Service) SetDeploymentMFY(mfy DeploymentMFY) {
+	s.deploymentMFY = &mfy
+}
+
+func (s *Service) DeploymentMFY() (DeploymentMFY, bool) {
+	if s.deploymentMFY == nil {
+		return DeploymentMFY{}, false
+	}
+	return *s.deploymentMFY, true
+}
+
+func (s *Service) TelegramDiagnostics(initData string) TelegramValidationDiagnostics {
+	_, diagnostics, _ := s.telegramValidator.ValidateWithDiagnostics(initData)
+	return diagnostics
+}
+
+func (s *Service) UserFromTelegramInitData(ctx context.Context, initData string) (users.User, TelegramValidationDiagnostics, error) {
+	telegramUser, diagnostics, err := s.telegramValidator.ValidateWithDiagnostics(initData)
+	if err != nil {
+		return users.User{}, diagnostics, err
+	}
+	user, err := s.users.GetByTelegramID(ctx, telegramUser.ID)
+	if err != nil {
+		if errors.Is(err, users.ErrUserNotFound) {
+			owner, ownerErr := s.bootstrapMFYOwner(ctx, telegramUser)
+			if ownerErr == nil {
+				return owner, diagnostics, nil
+			}
+			return users.User{}, diagnostics, ownerErr
+		}
+		return users.User{}, diagnostics, err
+	}
+	if s.cfg.MFYOwnerTelegramID != 0 && telegramUser.ID == s.cfg.MFYOwnerTelegramID {
+		owner, err := s.ensureOwnerUser(ctx, user, telegramUser)
+		if err != nil {
+			return users.User{}, diagnostics, err
+		}
+		user = owner
+	}
+	if !user.IsActive {
+		return users.User{}, diagnostics, users.ErrUserInactive
+	}
+	return user, diagnostics, nil
+}
+
+func (s *Service) bootstrapMFYOwner(ctx context.Context, telegramUser TelegramUser) (users.User, error) {
+	if s.cfg.MFYOwnerTelegramID == 0 || telegramUser.ID != s.cfg.MFYOwnerTelegramID {
+		return users.User{}, ErrUserNotAssigned
+	}
+	if s.deploymentMFY == nil {
+		return users.User{}, ErrMFYContextMissing
+	}
+	fullName := telegramDisplayName(telegramUser)
+	username := optionalString(telegramUser.Username)
+	user, err := s.users.Create(ctx, users.CreateUserInput{
+		FullName:         fullName,
+		TelegramID:       &telegramUser.ID,
+		TelegramUsername: username,
+		Role:             users.RoleMFYChairman,
+		MFYID:            &s.deploymentMFY.ID,
+	})
+	if errors.Is(err, users.ErrTelegramIDConflict) {
+		existing, getErr := s.users.GetByTelegramID(ctx, telegramUser.ID)
+		if getErr != nil {
+			return users.User{}, getErr
+		}
+		return s.ensureOwnerUser(ctx, existing, telegramUser)
+	}
+	return user, err
+}
+
+func (s *Service) ensureOwnerUser(ctx context.Context, user users.User, telegramUser TelegramUser) (users.User, error) {
+	if s.deploymentMFY == nil {
+		return users.User{}, ErrMFYContextMissing
+	}
+	needsUpdate := user.Role != users.RoleMFYChairman || user.MFYID == nil || *user.MFYID != s.deploymentMFY.ID || !user.IsActive
+	if !needsUpdate {
+		return user, nil
+	}
+	return s.users.Update(ctx, user.ID, users.UpdateUserInput{
+		FullName: firstNonEmpty(user.FullName, telegramDisplayName(telegramUser)),
+		Phone:    user.Phone,
+		Role:     users.RoleMFYChairman,
+		MFYID:    &s.deploymentMFY.ID,
+		IsActive: true,
+	})
+}
+
+func telegramDisplayName(user TelegramUser) string {
+	name := strings.TrimSpace(strings.Join([]string{user.FirstName, user.LastName}, " "))
+	if name != "" {
+		return name
+	}
+	if strings.TrimSpace(user.Username) != "" {
+		return "@" + strings.TrimSpace(user.Username)
+	}
+	return "MFY Chairman"
+}
+
+func optionalString(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return "MFY Chairman"
 }
 
 func (s *Service) Me(ctx context.Context, user users.User) users.User {

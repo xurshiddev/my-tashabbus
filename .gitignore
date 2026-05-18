@@ -1,6 +1,10 @@
 .env
 .env.*
 !.env.example
+!.env.local.bot.example
+!.env.local.test.example
+!apps/miniapp/.env.local.example
+!apps/admin/.env.local.example
 node_modules/
 dist/
 build/

@@ -93,13 +93,20 @@ func (h Handler) AssignLeader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		UserID uuid.UUID `json:"user_id"`
+		UserID     uuid.UUID `json:"user_id"`
+		TelegramID *int64    `json:"telegram_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		response.ErrorCode(w, http.StatusBadRequest, "VALIDATION_ERROR", "Invalid JSON request body")
 		return
 	}
-	assignment, err := h.service.AssignLeader(r.Context(), current, id, input.UserID)
+	var assignment StreetLeaderAssignment
+	var err error
+	if input.TelegramID != nil {
+		assignment, err = h.service.AssignLeaderByTelegramID(r.Context(), current, id, *input.TelegramID)
+	} else {
+		assignment, err = h.service.AssignLeader(r.Context(), current, id, input.UserID)
+	}
 	if err != nil {
 		writeError(w, err)
 		return

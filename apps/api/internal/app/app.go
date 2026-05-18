@@ -56,6 +56,15 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 		responsibleStore = responsibles.NewPgxStore(pool)
 	}
 	mfyService := mfys.NewService(mfyStore, userService)
+	deploymentMFY, err := mfyService.EnsureDeploymentMFY(ctx, cfg.AppMFYName)
+	if err != nil {
+		return nil, fmt.Errorf("ensure deployment mfy: %w", err)
+	}
+	authService.SetDeploymentMFY(auth.DeploymentMFY{
+		ID:   deploymentMFY.ID,
+		Name: deploymentMFY.Name,
+		Slug: cfg.AppMFYSlug,
+	})
 	streetService := streets.NewService(streetStore, mfyService, userService)
 	householdService := households.NewService(householdStore, streetService)
 	responsibleService := responsibles.NewService(responsibleStore, streetService, userService, householdService)

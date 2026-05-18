@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
-  authenticateDevTelegram,
-  authenticateTelegram,
-  fetchMyHouseholds,
-  fetchMyStreets,
-  updateHousehold,
-  type Household,
-  type Street,
+  ApiClientError,
+  apiBaseUrl,
+  fetchHealthStatus,
+  fetchMiniAppMe,
+  friendlyError,
+  type MFY,
+  type RequestDiagnostics,
+  type Role,
   type User,
 } from './api';
 import './styles.css';
@@ -17,195 +18,265 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
-        ready: () => void;
+        ready?: () => void;
+        expand?: () => void;
+        MainButton?: {
+          hide?: () => void;
+        };
       };
     };
   }
 }
 
-const sections = ['My Role', 'Today Tasks'];
+type Notice = { tone: 'info' | 'success' | 'error'; text: string };
+
+const emptyDiagnostics: RequestDiagnostics = {
+  healthStatus: 'not requested',
+  miniAppMeStatus: 'not requested',
+  lastRequestUrl: '',
+  lastRequestStatus: 'not requested',
+  fetchErrorName: '',
+  networkErrorMessage: '',
+  responseObjectExists: false,
+  responseBlockedBeforeBackend: false,
+  backendErrorCode: '',
+  backendErrorMessage: '',
+  telegramInitDataHeaderAttached: false,
+};
 
 function App() {
-  const [insideTelegram, setInsideTelegram] = useState(false);
+  const [webAppPresent, setWebAppPresent] = useState(false);
   const [initData, setInitData] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState(() => localStorage.getItem('my_tashabbus_miniapp_token') ?? '');
-  const [streets, setStreets] = useState<Street[]>([]);
-  const [households, setHouseholds] = useState<Household[]>([]);
-  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null);
-  const [authMessage, setAuthMessage] = useState('Authentication required');
-  const devTelegramAuth = import.meta.env.VITE_DEV_TELEGRAM_AUTH === 'true';
+  const [mfy, setMFY] = useState<MFY | null>(null);
+  const [notice, setNotice] = useState<Notice>({ tone: 'info', text: "Telegram ma'lumotlari tekshirilmoqda..." });
+  const [loading, setLoading] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<RequestDiagnostics>(emptyDiagnostics);
+
+  const isDevelopment = import.meta.env.DEV;
+  const miniAppOrigin = window.location.origin;
 
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
-    if (webApp) {
-      webApp.ready();
-      setInsideTelegram(true);
-      setInitData(webApp.initData ?? '');
+    if (!webApp) {
+      setNotice({ tone: 'error', text: 'Mini App Telegram ichidan ochilishi kerak.' });
+      return;
     }
+    webApp.ready?.();
+    webApp.expand?.();
+    webApp.MainButton?.hide?.();
+    setWebAppPresent(true);
+    setInitData(webApp.initData ?? '');
   }, []);
 
-  async function handleTelegramAuth() {
-    setAuthMessage('Authenticating...');
+  useEffect(() => {
+    if (webAppPresent && initData) {
+      loadCurrentUser(initData);
+      return;
+    }
+    if (webAppPresent && !initData) {
+      setNotice({ tone: 'error', text: 'Mini App Telegram ichidan ochilishi kerak.' });
+    }
+  }, [webAppPresent, initData]);
+
+  async function loadCurrentUser(authInitData = initData) {
+    if (!apiBaseUrl) {
+      setNotice({ tone: 'error', text: 'API URL sozlanmagan. VITE_API_BASE_URL ni tekshiring.' });
+      return;
+    }
+    if (!authInitData) {
+      setNotice({ tone: 'error', text: 'Mini App Telegram ichidan ochilishi kerak.' });
+      return;
+    }
+
+    setLoading(true);
+    setNotice({ tone: 'info', text: "Telegram ma'lumotlari tekshirilmoqda..." });
+
     try {
-      const result =
-        insideTelegram && initData ? await authenticateTelegram(initData) : await authenticateDevTelegram();
-      localStorage.setItem('my_tashabbus_miniapp_token', result.access_token);
-      setToken(result.access_token);
-      setUser(result.user);
-      setAuthMessage('Authenticated');
+      const health = await fetchHealthStatus();
+      setDiagnostics((current) => ({
+        ...current,
+        healthStatus: health.status,
+        lastRequestUrl: health.requestUrl,
+        lastRequestStatus: health.status,
+        fetchErrorName: '',
+        networkErrorMessage: health.networkErrorMessage,
+        responseObjectExists: health.status !== 'network failure',
+        responseBlockedBeforeBackend: health.status === 'network failure',
+      }));
+
+      const result = await fetchMiniAppMe(authInitData);
+      setUser(result.data.user);
+      setMFY(result.data.mfy);
+      setDiagnostics((current) => ({
+        ...result.diagnostics,
+        healthStatus: current.healthStatus,
+      }));
+      setNotice({ tone: 'success', text: 'Tizimga kirdingiz' });
     } catch (error) {
-      if (error instanceof Error && error.message === 'USER_NOT_REGISTERED') {
-        setAuthMessage("Siz hali tizimga biriktirilmagansiz. Iltimos, MFY administratori bilan bog'laning.");
-        return;
-      }
-      setAuthMessage('Authentication failed');
-    }
-  }
-
-  async function handleLoadMyStreets() {
-    if (!token) {
-      setAuthMessage('Authentication required');
-      return;
-    }
-    try {
-      const items = await fetchMyStreets(token);
-      setStreets(items);
-      if (items.length === 0) {
-        setAuthMessage("Sizga hali ko'cha biriktirilmagan.");
-      }
-    } catch {
-      setAuthMessage("Sizga hali ko'cha biriktirilmagan.");
-    }
-  }
-
-  async function handleLoadMyHouseholds() {
-    if (!token) {
-      setAuthMessage('Authentication required');
-      return;
-    }
-    try {
-      const items = await fetchMyHouseholds(token);
-      setHouseholds(items);
-      setSelectedHousehold(items[0] ?? null);
-      if (items.length === 0) {
-        setAuthMessage("Sizga hali xonadonlar biriktirilmagan.");
-      }
-    } catch {
-      setAuthMessage("Sizga hali xonadonlar biriktirilmagan.");
-    }
-  }
-
-  async function handleUpdateHousehold(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!token || !selectedHousehold) {
-      return;
-    }
-    const form = new FormData(event.currentTarget);
-    try {
-      const updated = await updateHousehold(token, selectedHousehold.id, {
-        house_number: String(form.get('house_number') ?? ''),
-        total_numbers: Number(form.get('total_numbers') || 0),
-        contacted_numbers: Number(form.get('contacted_numbers') || 0),
-        voted_numbers: Number(form.get('voted_numbers') || 0),
-        status: String(form.get('status') ?? 'NEW'),
-        notes: String(form.get('notes') ?? '') || null,
-      });
-      setSelectedHousehold(updated);
-      setHouseholds((items) => items.map((item) => (item.id === updated.id ? updated : item)));
-      setAuthMessage('Household updated');
-    } catch {
-      setAuthMessage('Household update failed');
+      setUser(null);
+      setMFY(null);
+      setDiagnostics((current) => ({
+        ...current,
+        lastRequestUrl: error instanceof ApiClientError && error.requestUrl ? error.requestUrl : `${apiBaseUrl}/miniapp/me`,
+        lastRequestStatus: error instanceof ApiClientError && error.status ? String(error.status) : 'network failure',
+        miniAppMeStatus: error instanceof ApiClientError && error.status ? String(error.status) : 'network failure',
+        fetchErrorName: error instanceof ApiClientError ? error.fetchErrorName ?? '' : 'UnknownError',
+        networkErrorMessage: error instanceof ApiClientError ? error.networkErrorMessage ?? '' : '',
+        responseObjectExists: error instanceof ApiClientError ? error.responseObjectExists : false,
+        responseBlockedBeforeBackend: !(error instanceof ApiClientError) || !error.responseObjectExists,
+        backendErrorCode: error instanceof ApiClientError ? error.code : 'UNKNOWN',
+        backendErrorMessage: error instanceof ApiClientError ? error.message : '',
+        telegramInitDataHeaderAttached: authInitData.length > 0,
+      }));
+      setNotice({ tone: 'error', text: friendlyError(error) });
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
     <main className="shell">
-      <section className="header">
-        <p className="mode">{insideTelegram ? 'Opened inside Telegram' : 'Browser preview mode'}</p>
-        <h1>My Tashabbus Mini App</h1>
-        <p>Telegram Mini App foundation</p>
+      <header className="app-header">
+        <p className="mode">{webAppPresent ? 'Opened inside Telegram' : 'Browser preview mode'}</p>
+        <h1>My Tashabbus</h1>
+        <p>MFY field workflow</p>
+      </header>
+
+      {isDevelopment && (
+        <DebugPanel
+          apiBaseUrl={apiBaseUrl}
+          miniAppOrigin={miniAppOrigin}
+          webAppPresent={webAppPresent}
+          initDataLength={initData.length}
+          diagnostics={diagnostics}
+          currentRole={user?.role ?? ''}
+        />
+      )}
+
+      <section className={`notice ${notice.tone}`} aria-live="polite">
+        {loading ? "Telegram ma'lumotlari tekshirilmoqda..." : notice.text}
       </section>
 
-      <section className="auth-panel" aria-label="Telegram authentication">
-        <div>
-          <h2>{user ? user.full_name : 'My Identity'}</h2>
-          <p>{user ? `${user.role}` : authMessage}</p>
-        </div>
-        {(insideTelegram || devTelegramAuth) && (
-          <button type="button" onClick={handleTelegramAuth}>
-            Authenticate with Telegram
-          </button>
-        )}
-      </section>
-
-      <section className="list" aria-label="Mini App placeholders">
-        <article className="panel">
-          <h2>My Streets</h2>
-          <button type="button" onClick={handleLoadMyStreets}>Load My Streets</button>
-          {streets.length === 0 ? (
-            <p>{authMessage}</p>
-          ) : (
-            <div className="street-list">
-              {streets.map((street) => (
-                <div className="street-item" key={street.id}>
-                  <strong>{street.name}</strong>
-                  <span>{street.planned_households_count} households</span>
-                  <span>{street.is_active ? 'Active' : 'Inactive'}</span>
-                  <small>{street.mfy_id}</small>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-        <article className="panel">
-          <h2>My Households</h2>
-          <button type="button" onClick={handleLoadMyHouseholds}>Mening xonadonlarim</button>
-          {households.length === 0 ? (
-            <p>{authMessage}</p>
-          ) : (
-            <div className="street-list">
-              {households.map((household) => (
-                <button className="household-item" type="button" key={household.id} onClick={() => setSelectedHousehold(household)}>
-                  <strong>{household.house_number}</strong>
-                  <span>{household.voted_numbers}/{household.total_numbers}</span>
-                  <span>{household.status}</span>
-                  <small>{household.street_id}</small>
-                </button>
-              ))}
-            </div>
-          )}
-          {selectedHousehold && (
-            <form className="edit-form" onSubmit={handleUpdateHousehold}>
-              <input name="house_number" defaultValue={selectedHousehold.house_number} placeholder="House number" />
-              <input name="total_numbers" defaultValue={selectedHousehold.total_numbers} type="number" min="0" />
-              <input name="contacted_numbers" defaultValue={selectedHousehold.contacted_numbers} type="number" min="0" />
-              <input name="voted_numbers" defaultValue={selectedHousehold.voted_numbers} type="number" min="0" />
-              <select name="status" defaultValue={selectedHousehold.status}>
-                <option value="NEW">NEW</option>
-                <option value="VISITED">VISITED</option>
-                <option value="EXPLAINED">EXPLAINED</option>
-                <option value="PARTIALLY_VOTED">PARTIALLY_VOTED</option>
-                <option value="FULLY_VOTED">FULLY_VOTED</option>
-                <option value="NOT_HOME">NOT_HOME</option>
-                <option value="CALLBACK_NEEDED">CALLBACK_NEEDED</option>
-                <option value="REFUSED">REFUSED</option>
-                <option value="INVALID_INFO">INVALID_INFO</option>
-              </select>
-              <input name="notes" defaultValue={selectedHousehold.notes ?? ''} placeholder="Notes" />
-              <button type="submit">Update Household</button>
-            </form>
-          )}
-        </article>
-        {sections.map((section) => (
-          <article className="panel" key={section}>
-            <h2>{section}</h2>
-            <p>Future role-based workflow placeholder.</p>
-          </article>
-        ))}
-      </section>
+      {user && mfy ? (
+        <RoleOnlyCard user={user} mfy={mfy} onRetry={() => loadCurrentUser()} loading={loading} />
+      ) : (
+        <AuthCard
+          webAppPresent={webAppPresent}
+          initDataPresent={Boolean(initData)}
+          loading={loading}
+          onRetry={() => loadCurrentUser()}
+        />
+      )}
     </main>
   );
+}
+
+function AuthCard(props: {
+  webAppPresent: boolean;
+  initDataPresent: boolean;
+  loading: boolean;
+  onRetry: () => void;
+}) {
+  let message = 'Mini App Telegram ichidan ochilishi kerak.';
+  if (props.webAppPresent && !props.initDataPresent) {
+    message = "Telegram initData topilmadi. Botdagi yangi WebApp tugmasi orqali qayta oching.";
+  }
+  if (props.webAppPresent && props.initDataPresent) {
+    message = "Telegram ma'lumotlari mavjud. Qayta tekshirish uchun tugmani bosing.";
+  }
+  return (
+    <section className="card">
+      <h2>Tekshiruv</h2>
+      <p>{message}</p>
+      <button type="button" onClick={props.onRetry} disabled={!props.webAppPresent || !props.initDataPresent || props.loading}>
+        Qayta tekshirish
+      </button>
+    </section>
+  );
+}
+
+function RoleOnlyCard(props: { user: User; mfy: MFY; loading: boolean; onRetry: () => void }) {
+  const displayName = props.user.full_name || String(props.user.telegram_id ?? 'Telegram user');
+  return (
+    <section className="card success-card">
+      <p className="eyebrow">Tizimga kirdingiz</p>
+      <h2>{displayName}</h2>
+      <div className="summary-list">
+        <SummaryRow label="MFY" value={props.mfy.name} />
+        <SummaryRow label="Foydalanuvchi" value={displayName} />
+        <SummaryRow label="Rol" value={props.user.role} />
+      </div>
+      <p className="role-copy">{roleCopy(props.user.role)}</p>
+      <button type="button" onClick={props.onRetry} disabled={props.loading}>
+        Qayta tekshirish
+      </button>
+    </section>
+  );
+}
+
+function SummaryRow(props: { label: string; value: string }) {
+  return (
+    <div className="summary-row">
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
+    </div>
+  );
+}
+
+function DebugPanel(props: {
+  apiBaseUrl: string;
+  miniAppOrigin: string;
+  webAppPresent: boolean;
+  initDataLength: number;
+  diagnostics: RequestDiagnostics;
+  currentRole: string;
+}) {
+  return (
+    <section className="debug-panel" aria-label="Development diagnostics">
+      <DebugRow label="API Base URL" value={props.apiBaseUrl || 'not configured'} />
+      <DebugRow label="Mini App origin" value={props.miniAppOrigin} />
+      <DebugRow label="Telegram WebApp object" value={props.webAppPresent ? 'present' : 'missing'} />
+      <DebugRow label="Telegram initData" value={props.initDataLength > 0 ? 'present' : 'missing'} />
+      <DebugRow label="initData length" value={String(props.initDataLength)} />
+      <DebugRow label="X-Telegram-Init-Data attached" value={props.diagnostics.telegramInitDataHeaderAttached ? 'yes' : 'no'} />
+      <DebugRow label="/health status" value={props.diagnostics.healthStatus} />
+      <DebugRow label="/miniapp/me status" value={props.diagnostics.miniAppMeStatus} />
+      <DebugRow label="Last request URL" value={props.diagnostics.lastRequestUrl || 'not requested'} />
+      <DebugRow label="Last request status" value={props.diagnostics.lastRequestStatus} />
+      <DebugRow label="Fetch error name" value={props.diagnostics.fetchErrorName || 'none'} />
+      <DebugRow label="Response object exists" value={props.diagnostics.responseObjectExists ? 'yes' : 'no'} />
+      <DebugRow label="Blocked before backend response" value={props.diagnostics.responseBlockedBeforeBackend ? 'yes' : 'no'} />
+      <DebugRow label="Network error" value={props.diagnostics.networkErrorMessage || 'none'} />
+      <DebugRow label="Backend error" value={props.diagnostics.backendErrorCode || 'none'} />
+      <DebugRow label="Backend message" value={props.diagnostics.backendErrorMessage || 'none'} />
+      <DebugRow label="Current role" value={props.currentRole || 'none'} />
+    </section>
+  );
+}
+
+function DebugRow(props: { label: string; value: string }) {
+  return (
+    <div className="debug-row">
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
+    </div>
+  );
+}
+
+function roleCopy(role: Role): string {
+  switch (role) {
+    case 'MFY_CHAIRMAN':
+      return 'Siz MFY raisi sifatida kirdingiz.';
+    case 'STREET_LEADER':
+      return "Siz ko'chaboshi sifatida kirdingiz.";
+    case 'RESPONSIBLE_PERSON':
+      return "Siz mas'ul sifatida kirdingiz.";
+    case 'SUPER_ADMIN':
+      return 'Bu eski admin roli. Mini App MVP oqimi MFY rollari uchun soddalashtirilgan.';
+    default:
+      return '';
+  }
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

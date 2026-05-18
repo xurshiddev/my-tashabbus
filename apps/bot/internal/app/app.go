@@ -30,7 +30,8 @@ func (a *App) Run(ctx context.Context) error {
 	updates := a.bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
 	defer a.bot.StopReceivingUpdates()
 
-	startHandler := handlers.NewStartHandler(a.bot, a.cfg.MiniAppURL, a.log)
+	startHandler := handlers.NewStartHandler(a.bot, a.cfg.MiniAppURL, a.cfg.MFYOwnerTelegramID, a.log)
+	myIDHandler := handlers.NewMyIDHandler(a.bot, a.log)
 
 	for {
 		select {
@@ -44,8 +45,11 @@ func (a *App) Run(ctx context.Context) error {
 			if update.Message == nil || !update.Message.IsCommand() {
 				continue
 			}
-			if update.Message.Command() == "start" {
+			switch update.Message.Command() {
+			case "start":
 				startHandler.Handle(update)
+			case "myid":
+				myIDHandler.Handle(update)
 			}
 		}
 	}

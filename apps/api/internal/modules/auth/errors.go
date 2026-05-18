@@ -11,4 +11,6 @@ var (
 	ErrInvalidInitData     = errors.New("invalid telegram init data")
 	ErrOldInitData         = errors.New("telegram init data is too old")
 	ErrUserNotRegistered   = errors.New("telegram user is not registered")
+	ErrUserNotAssigned     = errors.New("telegram user is not assigned to this mfy")
+	ErrMFYContextMissing   = errors.New("mfy context is not configured")
 )

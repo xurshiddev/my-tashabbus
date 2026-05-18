@@ -105,6 +105,14 @@ func (s *Service) AssignLeader(ctx context.Context, current users.User, streetID
 	return s.store.ReassignLeader(ctx, streetID, userID, &current.ID)
 }
 
+func (s *Service) AssignLeaderByTelegramID(ctx context.Context, current users.User, streetID uuid.UUID, telegramID int64) (StreetLeaderAssignment, error) {
+	leader, err := s.users.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return StreetLeaderAssignment{}, err
+	}
+	return s.AssignLeader(ctx, current, streetID, leader.ID)
+}
+
 func (s *Service) GetLeader(ctx context.Context, current users.User, streetID uuid.UUID) (AssignmentWithUser, error) {
 	street, err := s.Get(ctx, current, streetID)
 	if err != nil {
